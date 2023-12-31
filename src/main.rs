@@ -1,9 +1,20 @@
-use chip_8_emulator::opcodes::Opcode;
+use chip_8_emulator::Chip8;
+use clap::Parser;
+
+#[derive(clap::Parser, Debug)]
+struct Args {
+    /// Path to the ROM that will be loaded.
+    #[arg(short, long)]
+    rom: String,
+}
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let foo = Opcode::try_from_string("FX55")?;
+    let args = Args::parse();
 
-    dbg!(foo);
+    let chip_8 = Chip8::new();
+    dbg!(chip_8);
+
+    let rom_bytes = std::fs::read(args.rom)?;
 
     Ok(())
 }
