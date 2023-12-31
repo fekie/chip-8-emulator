@@ -12,7 +12,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
 
     let chip_8 = Chip8::new();
-    dbg!(chip_8);
 
     let rom_bytes = std::fs::read(args.rom)?;
 

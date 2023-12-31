@@ -62,11 +62,13 @@ impl Default for Memory {
     }
 }
 
-/* impl Memory {
+impl Memory {
+    /// Loads the font set into the first 80 bytes of memory.
     fn load_font_set(&mut self) {
-        self.0.read
+        self.0.set_rpos(0x00);
+        self.0.write_bytes(&FONT_SET);
     }
-} */
+}
 
 /// Starts with general purpose registers V0-VE. Fhe last register, VF
 // is used for the "carry" flag during addition, "no borrow" flag during
@@ -134,12 +136,18 @@ pub struct Chip8 {
 }
 
 impl Chip8 {
-    /// Creates a new emulator and initializes the memory in the emulator.
+    /// Creates a new emulator and initializes the memory.
     pub fn new() -> Self {
         let program_counter = ProgramCounter(PROGRAM_COUNTER_INITIAL);
 
-        let memory = Memory::default();
+        let mut memory = Memory::default();
+        memory.load_font_set();
 
-        todo!()
+        Self {
+            memory,
+
+            program_counter,
+            ..Default::default()
+        }
     }
 }
