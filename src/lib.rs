@@ -4,7 +4,37 @@
 
 pub mod opcodes;
 
+use bytebuffer::ByteBuffer;
 use opcodes::Opcode;
+
+const PROGRAM_COUNTER_INITIAL: usize = 0x200;
+
+/// The default font set used in the CHIP-8 interpreter.
+/// It works by treating the first 4 bits of each byte as pixels,
+/// which means each subsequent byte translates to a row of pixels below
+/// the current row.
+///
+/// This [website](https://multigesture.net/articles/how-to-write-an-emulator-chip-8-interpreter/)
+/// was used for the table, as well as a demonstration of how
+/// this works.
+const FONT_SET: [u8; 80] = [
+    0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
+    0x20, 0x60, 0x20, 0x20, 0x70, // 1
+    0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
+    0xF0, 0x10, 0xF0, 0x10, 0xF0, // 3
+    0x90, 0x90, 0xF0, 0x10, 0x10, // 4
+    0xF0, 0x80, 0xF0, 0x10, 0xF0, // 5
+    0xF0, 0x80, 0xF0, 0x90, 0xF0, // 6
+    0xF0, 0x10, 0x20, 0x40, 0x40, // 7
+    0xF0, 0x90, 0xF0, 0x90, 0xF0, // 8
+    0xF0, 0x90, 0xF0, 0x10, 0xF0, // 9
+    0xF0, 0x90, 0xF0, 0x90, 0x90, // A
+    0xE0, 0x90, 0xE0, 0x90, 0xE0, // B
+    0xF0, 0x80, 0x80, 0x80, 0xF0, // C
+    0xE0, 0x90, 0x90, 0x90, 0xE0, // D
+    0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
+    0xF0, 0x80, 0xF0, 0x80, 0x80, // F
+];
 
 /// The error used for errors related to the operation of the CHIP-8 emulator.
 #[derive(Debug, thiserror::Error)]
@@ -17,16 +47,26 @@ pub enum Chip8Error {
 
 /// Regions:
 /// - 0x000-0x1FF is used for the CHIP-8 interpreter.
-/// - 0x050-0x0A0 is used for the built-in pixel font set.
+/// - 0x050-0x0A0 is used for the built-in pixel font set (inside above range).
 /// - 0x200-0xFFF is used for the program ROM and scratch RAM.
+///
+/// Has a capacity of 0x1000 bytes.
 #[derive(Debug)]
-pub struct Memory([u8; 0x1000]);
+pub struct Memory(ByteBuffer);
 
 impl Default for Memory {
     fn default() -> Self {
-        Self([0; 0x1000])
+        let mut bytebuffer = ByteBuffer::new();
+        bytebuffer.resize(0x1000);
+        Self(bytebuffer)
     }
 }
+
+/* impl Memory {
+    fn load_font_set(&mut self) {
+        self.0.read
+    }
+} */
 
 /// Starts with general purpose registers V0-VE. Fhe last register, VF
 // is used for the "carry" flag during addition, "no borrow" flag during
@@ -56,13 +96,21 @@ pub struct SoundTimer(u8);
 #[derive(Debug, Default)]
 pub struct IndexRegister(u16);
 
+// Acceptable values are 0-0xFFF.
+#[derive(Debug, Default)]
+pub struct ProgramCounter(usize);
+
 /// Represents the pixel states of a 64 x 32 screen.
+///
+/// Has a capacity of 0x800 bytes.
 #[derive(Debug)]
-pub struct GraphicsMemory([u8; 0x800]);
+pub struct GraphicsMemory(ByteBuffer);
 
 impl Default for GraphicsMemory {
     fn default() -> Self {
-        Self([0; 0x800])
+        let mut bytebuffer = ByteBuffer::new();
+        bytebuffer.resize(0x800);
+        Self(bytebuffer)
     }
 }
 
@@ -77,6 +125,7 @@ pub struct Chip8 {
     graphics_memory: GraphicsMemory,
     registers: Registers,
     index_register: IndexRegister,
+    program_counter: ProgramCounter,
     delay_timer: DelayTimer,
     sound_timer: SoundTimer,
     stack: Stack,
@@ -85,9 +134,12 @@ pub struct Chip8 {
 }
 
 impl Chip8 {
-    /// Creates a new [`Chip8`]. This pre-initializes the memory
-    /// to where it is ready for a program to be loaded.
+    /// Creates a new emulator and initializes the memory in the emulator.
     pub fn new() -> Self {
-        Self::default()
+        let program_counter = ProgramCounter(PROGRAM_COUNTER_INITIAL);
+
+        let memory = Memory::default();
+
+        todo!()
     }
 }
