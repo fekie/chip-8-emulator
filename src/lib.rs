@@ -2,7 +2,7 @@
 
 #![warn(missing_docs, missing_debug_implementations)]
 
-pub mod opcodes;
+mod opcodes;
 
 const PROGRAM_OFFSET: usize = 0x200;
 const FONT_SET_OFFSET: usize = 0x050;
@@ -35,7 +35,7 @@ const FONT_SET: [u8; 80] = [
     0xF0, 0x80, 0xF0, 0x80, 0x80, // F
 ];
 
-/// The error used for errors related to the operation of the CHIP-8 emulator.
+/// An error used for errors related to the operation of the CHIP-8 emulator.
 #[allow(missing_docs)]
 #[derive(Debug, thiserror::Error)]
 pub enum Chip8Error {
@@ -45,8 +45,8 @@ pub enum Chip8Error {
     ErrorParsingOpcodeFromU16(String),
     #[error("Not enough memory.")]
     NotEnoughMemory,
-    #[error("Interpreter memory uninitialized.")]
-    InterpreterMemoryUninitialized,
+    #[error("Interpreter memory is uninitialized.")]
+    InterpreterMemoryIsUninitialized,
     #[error("Interpreter memory already initialized.")]
     InterpreterMemoryAlreadyInitialized,
     #[error("Program not loaded.")]
@@ -60,7 +60,7 @@ pub enum Chip8Error {
 ///
 /// Has a capacity of [`MEMORY_SIZE`] bytes.
 #[derive(Debug)]
-pub struct Memory([u8; MEMORY_SIZE]);
+struct Memory([u8; MEMORY_SIZE]);
 
 impl Default for Memory {
     fn default() -> Self {
@@ -87,43 +87,45 @@ impl Memory {
     }
 }
 
+/// The registers used for emulating general purpose registers V0-VE.
+///
 /// Starts with general purpose registers V0-VE. Fhe last register, VF
 // is used for the "carry" flag during addition, "no borrow" flag during
 /// subtraction, and is set upon pixel collision.
 #[derive(Debug, Default)]
-pub struct Registers([u8; 0xF]);
+struct Registers([u8; 0xF]);
 
 /// We go with a 32 byte stack, allowing for a 16 level stack.
 #[derive(Debug, Default)]
-pub struct Stack([u16; 0xF]);
+struct Stack([u16; 0xF]);
 
 /// A pointer that points to the level of the stack we are using.
 #[derive(Debug, Default)]
-pub struct StackPointer(usize);
+struct StackPointer(usize);
 
 /// A timer that counts down at 60Hz. If above 0, the timer will be "active"
 /// and count down to 0. At this point, a sound plays.  
 #[derive(Debug, Default)]
-pub struct DelayTimer(u8);
+struct DelayTimer(u8);
 
 /// A timer that counts down at 60Hz. If above 0, the timer will be "active"
 /// and count down to 0. At this point, a sound plays.  
 #[derive(Debug, Default)]
-pub struct SoundTimer(u8);
+struct SoundTimer(u8);
 
 // Acceptable values are 0-0xFFF.
 #[derive(Debug, Default)]
-pub struct IndexRegister(u16);
+struct IndexRegister(u16);
 
 // Acceptable values are 0-0xFFF.
 #[derive(Debug, Default)]
-pub struct ProgramCounter(usize);
+struct ProgramCounter(usize);
 
 /// Represents the pixel states of a 64 x 32 screen.
 ///
 /// Has a capacity of 0x800 bytes.
 #[derive(Debug)]
-pub struct GraphicsMemory([u8; 0x800]);
+struct GraphicsMemory([u8; 0x800]);
 
 impl Default for GraphicsMemory {
     fn default() -> Self {
@@ -133,7 +135,7 @@ impl Default for GraphicsMemory {
 
 /// Stores the state of the hex keypad, which goes from 0x0 to 0xF.
 #[derive(Debug, Default)]
-pub struct Keypad([u8; 0xF]);
+struct Keypad([u8; 0xF]);
 
 #[derive(Clone, Copy, Debug, Default)]
 enum EmulatorState {
