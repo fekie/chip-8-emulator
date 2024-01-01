@@ -135,7 +135,45 @@ impl Default for GraphicsMemory {
 #[derive(Debug, Default)]
 pub struct Keypad([u8; 0xF]);
 
-#[allow(missing_docs, dead_code)]
+#[derive(Clone, Copy, Debug, Default)]
+enum EmulatorState {
+    #[default]
+    InterpreterMemoryUninitialized,
+    InterpreterMemoryInitialized,
+    ProgramLoaded,
+}
+
+impl EmulatorState {
+    fn change_states(&mut self, new_state: EmulatorState) -> Result<(), Chip8Error> {
+        match new_state {
+            // If it's moving to the initialized state, we just want to panic
+            // because the user has definitely used some code that needs to be looked at.
+            Self::InterpreterMemoryUninitialized => {
+                panic!("Cannot uninitialize uninitialized memory.")
+            }
+            Self::InterpreterMemoryInitialized => match self {
+                Self::InterpreterMemoryInitialized => {
+                    return Err(Chip8Error::InterpreterMemoryAlreadyInitialized)
+                }
+                Self::ProgramLoaded => return Err(Chip8Error::InterpreterMemoryAlreadyInitialized),
+                _ => {}
+            },
+
+            Self::ProgramLoaded => {
+                if let Self::InterpreterMemoryUninitialized = self {
+                    return Err(Chip8Error::InterpreterMemoryIsUninitialized);
+                }
+            }
+        };
+
+        // If we don't meet any invalid states, move to the next state.
+        *self = new_state;
+        Ok(())
+    }
+}
+
+/// A struct used to emulate a CHIP-8 interpreter.
+#[allow(dead_code)]
 #[derive(Debug, Default)]
 pub struct Chip8 {
     /// See [`Memory`] for more information.
@@ -158,12 +196,7 @@ pub struct Chip8 {
     stack_pointer: StackPointer,
     /// See [`Keypad`] for more information.
     keypad: Keypad,
-    /// Is true after [`Self::initialize`] has been called.
-    /// If it is false, it will not allow program loading or emulation to start.
-    interpreter_memory_initialized: bool,
-    /// Is true after [`Self::load_program`] has been called.
-    /// If it is false, it will not allow emulation to start.
-    program_loaded: bool,
+    emulator_state: EmulatorState,
 }
 
 impl Chip8 {
@@ -176,24 +209,22 @@ impl Chip8 {
     /// Initializes the emulator's system memory. You can now load a program
     /// with [`Self::load_program`].
     pub fn initialize(&mut self) -> Result<(), Chip8Error> {
-        if self.interpreter_memory_initialized {
-            return Err(Chip8Error::InterpreterMemoryAlreadyInitialized);
-        }
+        self.emulator_state
+            .change_states(EmulatorState::InterpreterMemoryInitialized)?;
 
         self.program_counter = ProgramCounter(PROGRAM_OFFSET);
         self.memory.load_font_set()?;
-
-        self.interpreter_memory_initialized = true;
 
         Ok(())
     }
 
     /// Loads a program into memory from raw bytes. Requires that [`Self::initialize`]
     /// has been called. You can now start emulation cycles with [`Self::cycle`].
+    ///
+    /// To load a new program, simply call [`Self::load_program`] again..
     pub fn load_program(&mut self, program_bytes: Vec<u8>) -> Result<(), Chip8Error> {
-        if !self.interpreter_memory_initialized {
-            return Err(Chip8Error::InterpreterMemoryUninitialized);
-        }
+        self.emulator_state
+            .change_states(EmulatorState::ProgramLoaded)?;
 
         // We load it in starting at the program offset.
         let mut current_memory_address = PROGRAM_OFFSET;
@@ -214,8 +245,6 @@ impl Chip8 {
             self.memory.0[memory_address] = 0;
         }
 
-        self.program_loaded = true;
-
         Ok(())
     }
 
@@ -223,14 +252,7 @@ impl Chip8 {
     /// to be initialized via [`Self::initialize`] and a program to be loaded in with
     /// [`Self::load_program`].
     pub fn cycle(&mut self) -> Result<(), Chip8Error> {
-        if !self.interpreter_memory_initialized {
-            return Err(Chip8Error::InterpreterMemoryUninitialized);
-        }
-
-        if !self.program_loaded {
-            return Err(Chip8Error::ProgramNotLoaded);
-        }
-
-        unimplemented!()
+        /* let first_byte = self.memory.0[self.program_counter.0]; */
+        todo!()
     }
 }
