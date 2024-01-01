@@ -11,9 +11,14 @@ struct Args {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
 
-    let chip_8 = Chip8::new();
+    let mut chip_8 = Chip8::new();
+    chip_8.initialize()?;
 
-    let rom_bytes = std::fs::read(args.rom)?;
+    let program_bytes = std::fs::read(args.rom)?;
+
+    chip_8.load_program(program_bytes)?;
+
+    dbg!(chip_8);
 
     Ok(())
 }

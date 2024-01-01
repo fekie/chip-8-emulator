@@ -4,10 +4,9 @@
 
 pub mod opcodes;
 
-use bytebuffer::ByteBuffer;
-use opcodes::Opcode;
-
-const PROGRAM_COUNTER_INITIAL: usize = 0x200;
+const PROGRAM_OFFSET: usize = 0x200;
+const FONT_SET_OFFSET: usize = 0x050;
+const MEMORY_SIZE: usize = 0x1000;
 
 /// The default font set used in the CHIP-8 interpreter.
 /// It works by treating the first 4 bits of each byte as pixels,
@@ -37,36 +36,54 @@ const FONT_SET: [u8; 80] = [
 ];
 
 /// The error used for errors related to the operation of the CHIP-8 emulator.
+#[allow(missing_docs)]
 #[derive(Debug, thiserror::Error)]
 pub enum Chip8Error {
-    #[error("Error Parsing Opcode from String {0}")]
+    #[error("Error parsing opcode from String {0}.")]
     ErrorParsingOpcodeFromString(String),
-    #[error("Error Parsing Opcode From u16 {0}")]
+    #[error("Error parsing opcode from u16 {0}.")]
     ErrorParsingOpcodeFromU16(String),
+    #[error("Not enough memory.")]
+    NotEnoughMemory,
+    #[error("Interpreter memory uninitialized.")]
+    InterpreterMemoryUninitialized,
+    #[error("Interpreter memory already initialized.")]
+    InterpreterMemoryAlreadyInitialized,
+    #[error("Program not loaded.")]
+    ProgramNotLoaded,
 }
 
 /// Regions:
-/// - 0x000-0x1FF is used for the CHIP-8 interpreter.
+/// - 0x000-0x1FF is used for the CHIP-8 interpreter (unused in this implementation).
 /// - 0x050-0x0A0 is used for the built-in pixel font set (inside above range).
 /// - 0x200-0xFFF is used for the program ROM and scratch RAM.
 ///
-/// Has a capacity of 0x1000 bytes.
+/// Has a capacity of [`MEMORY_SIZE`] bytes.
 #[derive(Debug)]
-pub struct Memory(ByteBuffer);
+pub struct Memory([u8; MEMORY_SIZE]);
 
 impl Default for Memory {
     fn default() -> Self {
-        let mut bytebuffer = ByteBuffer::new();
-        bytebuffer.resize(0x1000);
-        Self(bytebuffer)
+        Self([0; MEMORY_SIZE])
     }
 }
 
 impl Memory {
     /// Loads the font set into the first 80 bytes of memory.
-    fn load_font_set(&mut self) {
-        self.0.set_rpos(0x00);
-        self.0.write_bytes(&FONT_SET);
+    fn load_font_set(&mut self) -> Result<(), Chip8Error> {
+        // We load it in starting at where the program counter initializes to.
+        let mut current_memory_address = FONT_SET_OFFSET;
+
+        for byte in FONT_SET {
+            match self.0.get_mut(current_memory_address) {
+                Some(memory_byte) => *memory_byte = byte,
+                None => return Err(Chip8Error::NotEnoughMemory),
+            }
+
+            current_memory_address += 1;
+        }
+
+        Ok(())
     }
 }
 
@@ -106,13 +123,11 @@ pub struct ProgramCounter(usize);
 ///
 /// Has a capacity of 0x800 bytes.
 #[derive(Debug)]
-pub struct GraphicsMemory(ByteBuffer);
+pub struct GraphicsMemory([u8; 0x800]);
 
 impl Default for GraphicsMemory {
     fn default() -> Self {
-        let mut bytebuffer = ByteBuffer::new();
-        bytebuffer.resize(0x800);
-        Self(bytebuffer)
+        Self([0; 0x800])
     }
 }
 
@@ -123,31 +138,99 @@ pub struct Keypad([u8; 0xF]);
 #[allow(missing_docs, dead_code)]
 #[derive(Debug, Default)]
 pub struct Chip8 {
+    /// See [`Memory`] for more information.
     memory: Memory,
+    /// See [`GraphicsMemory`] for more information.
     graphics_memory: GraphicsMemory,
+    /// See [`Registers`] for more information.
     registers: Registers,
+    /// See [`IndexRegister`] for more information.
     index_register: IndexRegister,
+    /// See [`ProgramCounter`] for more information.
     program_counter: ProgramCounter,
+    /// See [`DelayTimer`] for more information.
     delay_timer: DelayTimer,
+    /// See [`SoundTimer`] for more information.
     sound_timer: SoundTimer,
+    /// See [`Stack`] for more information.
     stack: Stack,
+    /// See [`StackPointer`] for more information.
     stack_pointer: StackPointer,
+    /// See [`Keypad`] for more information.
     keypad: Keypad,
+    /// Is true after [`Self::initialize`] has been called.
+    /// If it is false, it will not allow program loading or emulation to start.
+    interpreter_memory_initialized: bool,
+    /// Is true after [`Self::load_program`] has been called.
+    /// If it is false, it will not allow emulation to start.
+    program_loaded: bool,
 }
 
 impl Chip8 {
-    /// Creates a new emulator and initializes the memory.
+    /// Creates a new emulator with empty memory. You still have to initialize
+    /// to with [`Self::initialize`] to load programs.
     pub fn new() -> Self {
-        let program_counter = ProgramCounter(PROGRAM_COUNTER_INITIAL);
+        Self::default()
+    }
 
-        let mut memory = Memory::default();
-        memory.load_font_set();
-
-        Self {
-            memory,
-
-            program_counter,
-            ..Default::default()
+    /// Initializes the emulator's system memory. You can now load a program
+    /// with [`Self::load_program`].
+    pub fn initialize(&mut self) -> Result<(), Chip8Error> {
+        if self.interpreter_memory_initialized {
+            return Err(Chip8Error::InterpreterMemoryAlreadyInitialized);
         }
+
+        self.program_counter = ProgramCounter(PROGRAM_OFFSET);
+        self.memory.load_font_set()?;
+
+        self.interpreter_memory_initialized = true;
+
+        Ok(())
+    }
+
+    /// Loads a program into memory from raw bytes. Requires that [`Self::initialize`]
+    /// has been called. You can now start emulation cycles with [`Self::cycle`].
+    pub fn load_program(&mut self, program_bytes: Vec<u8>) -> Result<(), Chip8Error> {
+        if !self.interpreter_memory_initialized {
+            return Err(Chip8Error::InterpreterMemoryUninitialized);
+        }
+
+        // We load it in starting at the program offset.
+        let mut current_memory_address = PROGRAM_OFFSET;
+
+        for byte in program_bytes {
+            match self.memory.0.get_mut(current_memory_address) {
+                Some(memory_byte) => *memory_byte = byte,
+                None => return Err(Chip8Error::NotEnoughMemory),
+            }
+
+            current_memory_address += 1;
+        }
+
+        // We clear out the rest of the bytes and variables as well so that
+        // nothing interferes with this program (under the assumption that this
+        // can be called multiple times to switch programs).
+        for memory_address in current_memory_address..MEMORY_SIZE {
+            self.memory.0[memory_address] = 0;
+        }
+
+        self.program_loaded = true;
+
+        Ok(())
+    }
+
+    /// Runs a moves the emulator state by one cycle. Requires both the interpreter memory
+    /// to be initialized via [`Self::initialize`] and a program to be loaded in with
+    /// [`Self::load_program`].
+    pub fn cycle(&mut self) -> Result<(), Chip8Error> {
+        if !self.interpreter_memory_initialized {
+            return Err(Chip8Error::InterpreterMemoryUninitialized);
+        }
+
+        if !self.program_loaded {
+            return Err(Chip8Error::ProgramNotLoaded);
+        }
+
+        unimplemented!()
     }
 }

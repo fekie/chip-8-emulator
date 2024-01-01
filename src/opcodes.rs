@@ -92,6 +92,10 @@ impl fmt::Debug for Opcode {
 }
 
 impl Opcode {
+    pub fn try_new(raw: u16) -> Result<Self, Chip8Error> {
+        todo!()
+    }
+
     pub fn try_from_string(raw: &str) -> Result<Self, Chip8Error> {
         match raw {
             "0NNN" => Ok(Self::C0NNN),
