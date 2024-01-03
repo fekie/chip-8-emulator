@@ -23,14 +23,30 @@ use std::fmt;
 /// - VN: One of the 16 available variables. N may be 0 to F (hexadecimal);
 #[derive(Debug)]
 pub enum Opcode {
-    /// Represented by 0NNN. This will likely remain unimplemented
+    /// Represented by 0NNN.
+    ///
+    /// This will likely remain unimplemented
     /// as the wikipedia page says it is not used in most roms, and it appears
     /// to possibly be hardware dependant.
-    Call,
-    /// Represented of `00E0`.
+    CallMachineCodeRoutine,
+    /// Represented by `00E0`.
     ClearScreen,
-    /// Represented of `00EE`.
+    /// Represented by `00EE`.
     Return,
-    /// Represented of `00E0`.
+    /// Represented by `1NNN`.
     Jump,
+    /// Represented by `00E0`.
+    Call,
+    /// Represented by `00E0`.
+    SkipIfEqualsConstant,
+    /// Represented by `00E0`.
+    SkipIfNotEqual,
+    /// Represented by `00E0`.
+    SkipIfEqual,
+    /// Represented by `00E0`.
+    SetToConstant,
+    /// Represented by `00E0`.
+    AddConstant,
+    /// Represented by `00E0`.
+    SetToValue,
 }
