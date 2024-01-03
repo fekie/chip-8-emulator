@@ -2,7 +2,7 @@
 
 #![warn(missing_docs, missing_debug_implementations)]
 
-mod opcodes;
+pub mod opcodes;
 
 const PROGRAM_OFFSET: usize = 0x200;
 const FONT_SET_OFFSET: usize = 0x050;
