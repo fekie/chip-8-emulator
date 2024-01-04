@@ -7,5 +7,8 @@ edition = "2021"
 
 [dependencies]
 clap = { version = "4.4.12", features = ["derive"] }
+env_logger = "0.10.1"
+log = "0.4.20"
 pixels = "0.13.0"
 thiserror = "1.0.53"
+winit = "0.29.8"

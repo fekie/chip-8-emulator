@@ -208,7 +208,7 @@ impl Chip8 {
         Self::default()
     }
 
-    /// Initializes the emulator's system memory. You can now load a program
+    /// Initializes the emulator's system memory and screen. You can now load a program
     /// with [`Self::load_program`].
     pub fn initialize(&mut self) -> Result<(), Chip8Error> {
         self.emulator_state
@@ -216,6 +216,8 @@ impl Chip8 {
 
         self.program_counter = ProgramCounter(PROGRAM_OFFSET);
         self.memory.load_font_set()?;
+
+        // TODO: initialize screen here
 
         Ok(())
     }
