@@ -2,8 +2,6 @@
 
 #![warn(missing_docs, missing_debug_implementations)]
 
-pub mod opcodes;
-
 const PROGRAM_OFFSET: usize = 0x200;
 const FONT_SET_OFFSET: usize = 0x050;
 const MEMORY_SIZE: usize = 0x1000;

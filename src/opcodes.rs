@@ -1,6 +1,6 @@
 //! This module relates to opcode processing and formatting.
 
-use crate::{Chip8, Chip8Error};
+use super::chip_8::{Chip8, Chip8Error};
 use std::fmt;
 
 /// A representation of all the CHIP-8 opcodes.

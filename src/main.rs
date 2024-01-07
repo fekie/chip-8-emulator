@@ -1,8 +1,11 @@
-use chip_8_emulator::{opcodes::Opcode, Chip8};
+use chip_8::Chip8;
 use clap::Parser;
 use env_logger::Env;
 use log::{info, warn};
 use std::io::Write;
+
+mod chip_8;
+mod opcodes;
 
 #[derive(clap::Parser, Debug)]
 struct Args {
