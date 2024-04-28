@@ -11,4 +11,5 @@ env_logger = "0.10.1"
 log = "0.4.20"
 pixels = "0.13.0"
 thiserror = "1.0.53"
-winit = "0.29.8"
+winit = "0.28.7"                                     # 0.30.0 is AWFUL
+winit_input_helper = "0.14.1"

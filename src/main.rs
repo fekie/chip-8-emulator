@@ -1,11 +1,28 @@
 use chip_8::Chip8;
 use clap::Parser;
 use env_logger::Env;
-use log::{info, warn};
+use log::{error, info, warn};
+use pixels::{Pixels, SurfaceTexture};
+use std::error::Error;
 use std::io::Write;
+use winit::{
+    dpi::{self, LogicalSize},
+    event::{Event, VirtualKeyCode, WindowEvent},
+    event_loop::{ControlFlow, EventLoop},
+    window::WindowBuilder,
+};
+use winit_input_helper::WinitInputHelper;
 
 mod chip_8;
 mod opcodes;
+mod renderer;
+
+const WIDTH: u32 = 64;
+const HEIGHT: u32 = 32;
+// We scale everything up by a factor of 8
+const SCALE: u32 = 8;
+const WINDOW_WIDTH: u32 = 64 * SCALE;
+const WINDOW_HEIGHT: u32 = 32 * SCALE;
 
 #[derive(clap::Parser, Debug)]
 struct Args {
@@ -13,6 +30,8 @@ struct Args {
     #[arg(short, long)]
     rom: String,
 }
+
+struct Emulator {}
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let env = Env::default().default_filter_or("info");
@@ -30,17 +49,66 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     chip_8.load_program(program_bytes.clone())?;
 
-    /* let program_as_opcodes = program_bytes
-    .iter()
-    .step_by(2)
-    .zip(program_bytes.iter().skip(1).step_by(2))
-    .map(|(first_byte, next_byte)| {
-        let combined = ((*first_byte as u16) << 8) | *next_byte as u16;
-        Opcode::new(combined)
-    })
-    .collect::<Vec<Opcode>>(); */
+    // Hang on to this example for dear life:
+    // https://github.com/parasyte/pixels/blob/main/examples/minimal-winit/src/main.rs
+    let event_loop = EventLoop::new();
+    let mut input = WinitInputHelper::new();
 
-    // dbg!(program_as_opcodes);
+    let window = {
+        let size = LogicalSize::new(WINDOW_WIDTH as f64, WINDOW_HEIGHT as f64);
 
-    Ok(())
+        WindowBuilder::new()
+            .with_title("CHIP-8 Emulator")
+            .with_inner_size(size)
+            .with_min_inner_size(size)
+            .build(&event_loop)
+            .unwrap()
+    };
+
+    let mut pixels = {
+        let window_size = window.inner_size();
+        let surface_texture = SurfaceTexture::new(window_size.width, window_size.height, &window);
+        Pixels::new(WINDOW_WIDTH, WINDOW_HEIGHT, surface_texture)?
+    };
+
+    event_loop.run(move |event, _, control_flow| {
+        // Draw the current frame
+        if let Event::RedrawRequested(_) = event {
+            //world.draw(pixels.frame_mut());
+            if let Err(err) = pixels.render() {
+                log_pixels_error("pixels.render", err);
+                *control_flow = ControlFlow::Exit;
+                return;
+            }
+        }
+
+        // Handle input events
+        if input.update(&event) {
+            // Close events
+            if input.key_pressed(VirtualKeyCode::Escape) || input.close_requested() {
+                *control_flow = ControlFlow::Exit;
+                return;
+            }
+
+            // Resize the window
+            if let Some(size) = input.window_resized() {
+                if let Err(err) = pixels.resize_surface(size.width, size.height) {
+                    log_pixels_error("pixels.resize_surface", err);
+                    *control_flow = ControlFlow::Exit;
+                    return;
+                }
+            }
+
+            // Update internal state and request a redraw
+            //world.update();
+            window.request_redraw();
+        }
+    });
+}
+
+fn log_pixels_error<E: std::error::Error + 'static>(method_name: &str, err: E) {
+    error!("{method_name}() failed: {err}");
+    if let Some(e) = err.source() {
+        error!("  Caused by: {}", e);
+    }
 }
