@@ -2,6 +2,10 @@
 
 #![warn(missing_docs, missing_debug_implementations)]
 
+use self::screen::Screen;
+
+mod screen;
+
 const PROGRAM_OFFSET: usize = 0x200;
 const FONT_SET_OFFSET: usize = 0x050;
 const MEMORY_SIZE: usize = 0x1000;
@@ -53,7 +57,7 @@ pub enum Chip8Error {
 
 /// Regions:
 /// - 0x000-0x1FF is used for the CHIP-8 interpreter (unused in this implementation).
-/// - 0x050-0x0A0 is used for the built-in pixel font set (inside above range).
+/// - 0x050-0x0A0 is used for the built-in pixel font set.
 /// - 0x200-0xFFF is used for the program ROM and scratch RAM.
 ///
 /// Has a capacity of [`MEMORY_SIZE`] bytes.
@@ -91,15 +95,11 @@ impl Memory {
 // is used for the "carry" flag during addition, "no borrow" flag during
 /// subtraction, and is set upon pixel collision.
 #[derive(Debug, Default)]
-struct Registers([u8; 0xF]);
+struct Registers([u8; 16]);
 
-/// We go with a 32 byte stack, allowing for a 16 level stack.
+/// We go with a 32 word stack
 #[derive(Debug, Default)]
-struct Stack([u16; 0xF]);
-
-/// A pointer that points to the level of the stack we are using.
-#[derive(Debug, Default)]
-struct StackPointer(usize);
+struct Stack([u16; 32]);
 
 /// A timer that counts down at 60Hz. If above 0, the timer will be "active"
 /// and count down to 0. At this point, a sound plays.  
@@ -111,25 +111,11 @@ struct DelayTimer(u8);
 #[derive(Debug, Default)]
 struct SoundTimer(u8);
 
-// Acceptable values are 0-0xFFF.
 #[derive(Debug, Default)]
 struct IndexRegister(u16);
 
-// Acceptable values are 0-0xFFF.
 #[derive(Debug, Default)]
 struct ProgramCounter(usize);
-
-/// Represents the pixel states of a 64 x 32 screen.
-///
-/// Has a capacity of 0x800 bytes.
-#[derive(Debug)]
-struct GraphicsMemory([u8; 0x800]);
-
-impl Default for GraphicsMemory {
-    fn default() -> Self {
-        Self([0; 0x800])
-    }
-}
 
 /// Stores the state of the hex keypad, which goes from 0x0 to 0xF.
 #[derive(Debug, Default)]
@@ -178,8 +164,8 @@ impl EmulatorState {
 pub struct Chip8 {
     /// See [`Memory`] for more information.
     memory: Memory,
-    /// See [`GraphicsMemory`] for more information.
-    graphics_memory: GraphicsMemory,
+    /// See [`Screen`] for more information.
+    screen: Screen,
     /// See [`Registers`] for more information.
     registers: Registers,
     /// See [`IndexRegister`] for more information.
@@ -192,8 +178,6 @@ pub struct Chip8 {
     sound_timer: SoundTimer,
     /// See [`Stack`] for more information.
     stack: Stack,
-    /// See [`StackPointer`] for more information.
-    stack_pointer: StackPointer,
     /// See [`Keypad`] for more information.
     keypad: Keypad,
     emulator_state: EmulatorState,
@@ -215,7 +199,8 @@ impl Chip8 {
         self.program_counter = ProgramCounter(PROGRAM_OFFSET);
         self.memory.load_font_set()?;
 
-        // TODO: initialize screen here
+        // Screen memory is already initialized.
+        // The actual screen window is initialized in the main function
 
         Ok(())
     }

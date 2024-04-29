@@ -1,13 +1,12 @@
 use chip_8::Chip8;
 use clap::Parser;
 use env_logger::Env;
-use log::{error, info, warn};
+use log::error;
 use pixels::{Pixels, SurfaceTexture};
-use std::error::Error;
 use std::io::Write;
 use winit::{
-    dpi::{self, LogicalSize},
-    event::{Event, VirtualKeyCode, WindowEvent},
+    dpi::LogicalSize,
+    event::{Event, VirtualKeyCode},
     event_loop::{ControlFlow, EventLoop},
     window::WindowBuilder,
 };
@@ -15,14 +14,11 @@ use winit_input_helper::WinitInputHelper;
 
 mod chip_8;
 mod opcodes;
-mod renderer;
 
 const WIDTH: u32 = 64;
 const HEIGHT: u32 = 32;
 // We scale everything up by a factor of 8
 const SCALE: u32 = 8;
-const WINDOW_WIDTH: u32 = WIDTH * SCALE;
-const WINDOW_HEIGHT: u32 = HEIGHT * SCALE;
 
 #[derive(clap::Parser, Debug)]
 struct Args {
@@ -32,7 +28,7 @@ struct Args {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let env = Env::default().default_filter_or("info");
+    let env = Env::default().default_filter_or("warn");
 
     env_logger::Builder::from_env(env)
         .format(|buf, record| writeln!(buf, "{}: {}", record.level(), record.args()))
@@ -53,7 +49,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut input = WinitInputHelper::new();
 
     let window = {
-        let size = LogicalSize::new(WINDOW_WIDTH as f64, WINDOW_HEIGHT as f64);
+        let size = LogicalSize::new((WIDTH * SCALE) as f64, (HEIGHT * SCALE) as f64);
 
         WindowBuilder::new()
             .with_title("CHIP-8 Emulator")
@@ -66,20 +62,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut pixels = {
         let window_size = window.inner_size();
         let surface_texture = SurfaceTexture::new(window_size.width, window_size.height, &window);
-        Pixels::new(WINDOW_WIDTH, WINDOW_HEIGHT, surface_texture)?
+        Pixels::new(WIDTH, HEIGHT, surface_texture)?
     };
 
     event_loop.run(move |event, _, control_flow| {
         // Draw the current frame
         if let Event::RedrawRequested(_) = event {
-            for (i, pixel) in pixels.frame_mut().chunks_exact_mut(4).enumerate() {
+            chip_8.draw(pixels.frame_mut());
+            /*  for (i, pixel) in pixels.frame_mut().chunks_exact_mut(4).enumerate() {
                 let x = (i % WIDTH as usize) as i16;
                 let y = (i / WIDTH as usize) as i16;
 
                 let rgba = [0x5e, 0x48, 0xe8, 0xff];
 
                 pixel.copy_from_slice(&rgba);
-            }
+            } */
 
             //world.draw(pixels.frame_mut());
             if let Err(err) = pixels.render() {
