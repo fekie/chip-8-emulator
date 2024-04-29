@@ -21,8 +21,8 @@ const WIDTH: u32 = 64;
 const HEIGHT: u32 = 32;
 // We scale everything up by a factor of 8
 const SCALE: u32 = 8;
-const WINDOW_WIDTH: u32 = 64 * SCALE;
-const WINDOW_HEIGHT: u32 = 32 * SCALE;
+const WINDOW_WIDTH: u32 = WIDTH * SCALE;
+const WINDOW_HEIGHT: u32 = HEIGHT * SCALE;
 
 #[derive(clap::Parser, Debug)]
 struct Args {
@@ -30,8 +30,6 @@ struct Args {
     #[arg(short, long)]
     rom: String,
 }
-
-struct Emulator {}
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let env = Env::default().default_filter_or("info");
@@ -74,6 +72,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     event_loop.run(move |event, _, control_flow| {
         // Draw the current frame
         if let Event::RedrawRequested(_) = event {
+            for (i, pixel) in pixels.frame_mut().chunks_exact_mut(4).enumerate() {
+                let x = (i % WIDTH as usize) as i16;
+                let y = (i / WIDTH as usize) as i16;
+
+                let rgba = [0x5e, 0x48, 0xe8, 0xff];
+
+                pixel.copy_from_slice(&rgba);
+            }
+
             //world.draw(pixels.frame_mut());
             if let Err(err) = pixels.render() {
                 log_pixels_error("pixels.render", err);
