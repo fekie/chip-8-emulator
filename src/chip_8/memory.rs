@@ -65,6 +65,7 @@ impl Memory {
         ((self.0[address] as u16) << 8) | self.0[address + 1] as u16
     }
 
+    #[allow(dead_code)]
     /// Sets a word at memory address. This writes to the
     /// bytes at `memory[address]` and `memory[address+1]`.
     pub(crate) fn set_word(&mut self, address: usize, word: u16) {
