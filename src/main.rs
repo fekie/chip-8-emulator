@@ -13,7 +13,6 @@ use winit::{
 use winit_input_helper::WinitInputHelper;
 
 mod chip_8;
-mod opcodes;
 
 const WIDTH: u32 = 64;
 const HEIGHT: u32 = 32;
@@ -69,16 +68,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Draw the current frame
         if let Event::RedrawRequested(_) = event {
             chip_8.draw(pixels.frame_mut());
-            /*  for (i, pixel) in pixels.frame_mut().chunks_exact_mut(4).enumerate() {
-                let x = (i % WIDTH as usize) as i16;
-                let y = (i / WIDTH as usize) as i16;
 
-                let rgba = [0x5e, 0x48, 0xe8, 0xff];
-
-                pixel.copy_from_slice(&rgba);
-            } */
-
-            //world.draw(pixels.frame_mut());
             if let Err(err) = pixels.render() {
                 log_pixels_error("pixels.render", err);
                 *control_flow = ControlFlow::Exit;
@@ -104,7 +94,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
 
             // Update internal state and request a redraw
-            //world.update();
+            chip_8.cycle().unwrap();
             window.request_redraw();
         }
     });

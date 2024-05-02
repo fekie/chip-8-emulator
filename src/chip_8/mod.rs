@@ -2,10 +2,12 @@
 
 #![warn(missing_docs, missing_debug_implementations)]
 
-use self::screen::Screen;
+use self::{instruction::Instruction, screen::Screen};
 
+mod instruction;
 mod screen;
 
+/// The address where our program starts in memory
 const PROGRAM_OFFSET: usize = 0x200;
 const FONT_SET_OFFSET: usize = 0x050;
 const MEMORY_SIZE: usize = 0x1000;
@@ -89,14 +91,6 @@ impl Memory {
     }
 }
 
-/// The registers used for emulating general purpose registers V0-VE.
-///
-/// Starts with general purpose registers V0-VE. Fhe last register, VF
-// is used for the "carry" flag during addition, "no borrow" flag during
-/// subtraction, and is set upon pixel collision.
-#[derive(Debug, Default)]
-struct Registers([u8; 16]);
-
 /// We go with a 32 word stack
 #[derive(Debug, Default)]
 struct Stack([u16; 32]);
@@ -110,12 +104,6 @@ struct DelayTimer(u8);
 /// and count down to 0. At this point, a sound plays.  
 #[derive(Debug, Default)]
 struct SoundTimer(u8);
-
-#[derive(Debug, Default)]
-struct IndexRegister(u16);
-
-#[derive(Debug, Default)]
-struct ProgramCounter(usize);
 
 /// Stores the state of the hex keypad, which goes from 0x0 to 0xF.
 #[derive(Debug, Default)]
@@ -166,13 +154,15 @@ pub struct Chip8 {
     memory: Memory,
     /// See [`Screen`] for more information.
     screen: Screen,
-    /// See [`Registers`] for more information.
-    registers: Registers,
+    /// The registers used for emulating general purpose registers V0-VE.
+    ///
+    /// Starts with general purpose registers V0-VE. Fhe last register, VF
+    // is used for the "carry" flag during addition, "no borrow" flag during
+    /// subtraction, and is set upon pixel collision.
+    registers: [u8; 16],
     /// See [`IndexRegister`] for more information.
-    index_register: IndexRegister,
-    /// See [`ProgramCounter`] for more information.
-    program_counter: ProgramCounter,
-    /// See [`DelayTimer`] for more information.
+    index_register: u16,
+    program_counter: u16,
     delay_timer: DelayTimer,
     /// See [`SoundTimer`] for more information.
     sound_timer: SoundTimer,
@@ -196,7 +186,7 @@ impl Chip8 {
         self.emulator_state
             .change_states(EmulatorState::InterpreterMemoryInitialized)?;
 
-        self.program_counter = ProgramCounter(PROGRAM_OFFSET);
+        self.program_counter = PROGRAM_OFFSET as u16;
         self.memory.load_font_set()?;
 
         // Screen memory is already initialized.
@@ -239,7 +229,47 @@ impl Chip8 {
     /// to be initialized via [`Self::initialize`] and a program to be loaded in with
     /// [`Self::load_program`].
     pub fn cycle(&mut self) -> Result<(), Chip8Error> {
-        /* let first_byte = self.memory.0[self.program_counter.0]; */
-        todo!()
+        let raw = self.fetch();
+        let instruction = self.decode(raw);
+        self.execute(instruction);
+
+        Ok(())
+    }
+
+    /// Fetches the current instruction word and increments the PC by 2.
+    fn fetch(&mut self) -> u16 {
+        let first_byte = self.memory.0[self.program_counter as usize];
+        let second_byte = self.memory.0[self.program_counter as usize + 1];
+
+        // If we increment the PC before we pull an instruction from it,
+        // we're gonna have problems.
+        self.program_counter += 2;
+
+        ((first_byte as u16) << 8) | second_byte as u16
+    }
+
+    /// Decodes the instruction word into an [`Instruction`]
+    fn decode(&self, raw: u16) -> Instruction {
+        Instruction::new(raw)
+    }
+
+    fn execute(&mut self, instruction: Instruction) {
+        match instruction {
+            Instruction::Clear => self.screen.clear(),
+            Instruction::Jump { nnn } => {
+                self.program_counter = nnn;
+            }
+            Instruction::SetRegister { vx, nn } => {
+                self.registers[vx as usize] = nn;
+            }
+            Instruction::AddToRegisterVx { vx, nn } => {
+                self.registers[vx as usize] += nn;
+            }
+            Instruction::SetIndexRegister { nnn } => {
+                self.index_register = nnn;
+            }
+            Instruction::Draw { vx, vy, n } => {}
+            _ => unimplemented!(),
+        }
     }
 }

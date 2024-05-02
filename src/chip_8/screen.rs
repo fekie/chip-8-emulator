@@ -18,6 +18,15 @@ impl Default for Screen {
     }
 }
 
+impl Screen {
+    /// Clears the screen.
+    pub fn clear(&mut self) {
+        for b in self.0.iter_mut() {
+            *b = 0x00;
+        }
+    }
+}
+
 impl Chip8 {
     /// Draws the contents of the screen memory to the screen.
     pub fn draw(&self, frame: &mut [u8]) {
