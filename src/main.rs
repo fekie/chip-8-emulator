@@ -14,8 +14,6 @@ use winit_input_helper::WinitInputHelper;
 
 mod chip_8;
 
-const WIDTH: u32 = 64;
-const HEIGHT: u32 = 32;
 // We scale everything up by a factor of 8
 const SCALE: u32 = 8;
 
