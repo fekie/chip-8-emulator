@@ -2,6 +2,8 @@
 
 #![warn(missing_docs, missing_debug_implementations)]
 
+use crate::{HEIGHT, WIDTH};
+
 use self::{instruction::Instruction, screen::Screen};
 
 mod instruction;
@@ -43,18 +45,12 @@ const FONT_SET: [u8; 80] = [
 #[allow(missing_docs)]
 #[derive(Debug, thiserror::Error)]
 pub enum Chip8Error {
-    #[error("Error parsing opcode from String {0}.")]
-    ErrorParsingOpcodeFromString(String),
-    #[error("Error parsing opcode from u16 {0}.")]
-    ErrorParsingOpcodeFromU16(String),
     #[error("Not enough memory.")]
     NotEnoughMemory,
     #[error("Interpreter memory is uninitialized.")]
     InterpreterMemoryIsUninitialized,
     #[error("Interpreter memory already initialized.")]
     InterpreterMemoryAlreadyInitialized,
-    #[error("Program not loaded.")]
-    ProgramNotLoaded,
 }
 
 /// Regions:
@@ -160,8 +156,9 @@ pub struct Chip8 {
     // is used for the "carry" flag during addition, "no borrow" flag during
     /// subtraction, and is set upon pixel collision.
     registers: [u8; 16],
-    /// See [`IndexRegister`] for more information.
+    /// Used for pointing to memory locations.
     index_register: u16,
+    /// Points to the next instruction.
     program_counter: u16,
     delay_timer: DelayTimer,
     /// See [`SoundTimer`] for more information.
@@ -183,11 +180,11 @@ impl Chip8 {
     /// Initializes the emulator's system memory and screen. You can now load a program
     /// with [`Self::load_program`].
     pub fn initialize(&mut self) -> Result<(), Chip8Error> {
-        self.emulator_state
-            .change_states(EmulatorState::InterpreterMemoryInitialized)?;
-
         self.program_counter = PROGRAM_OFFSET as u16;
         self.memory.load_font_set()?;
+
+        self.emulator_state
+            .change_states(EmulatorState::InterpreterMemoryInitialized)?;
 
         // Screen memory is already initialized.
         // The actual screen window is initialized in the main function
@@ -253,6 +250,7 @@ impl Chip8 {
         Instruction::new(raw)
     }
 
+    /// Executes the provided instruction.
     fn execute(&mut self, instruction: Instruction) {
         match instruction {
             Instruction::Clear => self.screen.clear(),
@@ -268,8 +266,56 @@ impl Chip8 {
             Instruction::SetIndexRegister { nnn } => {
                 self.index_register = nnn;
             }
-            Instruction::Draw { vx, vy, n } => {}
-            _ => unimplemented!(),
+            Instruction::Draw { vx, vy, n } => self.instruction_draw(vx, vy, n),
+        }
+    }
+
+    fn instruction_draw(&mut self, vx: u8, vy: u8, n: u8) {
+        // Initialize VF
+        self.registers[0xF] = 0;
+
+        let mut x = self.registers[vx as usize] % WIDTH as u8;
+        let mut y = self.registers[vy as usize] % HEIGHT as u8;
+
+        for row in 0..n {
+            let sprite_byte = self.memory.0[self.index_register as usize + row as usize];
+
+            // We iterate through the bits in the byte from left to right,
+            // where each corresponds with an x value.
+            for shift in (0..=7).rev() {
+                let needs_invert = ((sprite_byte >> shift) & 0b0000_0001) == 1;
+
+                // If we have a bit at this position, flip
+                // the corresponding pixel. If we turned this
+                // pixel off (and it used to be on), then
+                // set VF to 1.
+                if needs_invert {
+                    let new_state = self.screen.invert(x, y);
+
+                    if !new_state {
+                        self.registers[0xF] = 1;
+                    }
+                }
+
+                // Increment x
+                x += 1;
+
+                // End early if we are at the end of the screen.
+                if x == WIDTH as u8 {
+                    break;
+                }
+            }
+
+            // Reset x to original value
+            x = self.registers[vx as usize] % WIDTH as u8;
+
+            // Increment y for every row
+            y += 1;
+
+            // End early if we are at the bottom of the screen.
+            if y == HEIGHT as u8 {
+                break;
+            }
         }
     }
 }

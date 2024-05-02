@@ -1,8 +1,5 @@
 //! This module relates to opcode processing and formatting.
 
-use crate::chip_8::{Chip8, Chip8Error};
-use std::fmt;
-
 /// A representation of all the CHIP-8 opcodes.
 ///
 /// The names of the opcodes are unofficial and made by me. This means
@@ -103,8 +100,8 @@ impl Instruction {
         // which opcode a u16 is.
         let first_nibble = raw >> 12;
 
-        println!("{:04X}", first_nibble);
-        println!("{:04X}", raw);
+        //println!("{:04X}", first_nibble);
+        //println!("{:04X}", raw);
 
         match first_nibble {
             0x0 => {
