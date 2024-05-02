@@ -54,7 +54,8 @@ pub enum Chip8Error {
 }
 
 /// Regions:
-/// - 0x000-0x1FF is used for the CHIP-8 interpreter (unused in this implementation).
+/// - 0x000-0x1FF is used for the CHIP-8 interpreter (used for the stack
+/// in this implementation).
 /// - 0x050-0x0A0 is used for the built-in pixel font set.
 /// - 0x200-0xFFF is used for the program ROM and scratch RAM.
 ///
@@ -267,6 +268,7 @@ impl Chip8 {
                 self.index_register = nnn;
             }
             Instruction::Draw { vx, vy, n } => self.instruction_draw(vx, vy, n),
+            _ => unimplemented!(),
         }
     }
 

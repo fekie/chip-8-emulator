@@ -20,18 +20,20 @@
 /// - VN: One of the 16 available variables. N may be 0 to F (hexadecimal);
 #[derive(Debug)]
 pub enum Instruction {
-    /* /// Represented by 0NNN.
+    /// Represented by 0NNN.
     ///
-    /// This will likely remain unimplemented
-    /// as the wikipedia page says it is not used in most roms, and it appears
-    /// to possibly be hardware dependant.
+    /// This will remain unimplemented as it was used to pause
+    /// the chip-8 interpreter and run hardware specific code,
+    /// which was not used for most games.
     CallMachineCodeRoutine,
     /// Represented by `00E0`.
+    ///
+    /// Clears the screen.
     ClearScreen,
     /// Represented by `00EE`.
+    ///
+    ///
     Return,
-    /// Represented by `1NNN`.
-    Jump,
     /// Represented by `00E0`.
     Call,
     /// Represented by `00E0`.
@@ -45,7 +47,7 @@ pub enum Instruction {
     /// Represented by `00E0`.
     AddConstant,
     /// Represented by `00E0`.
-    SetToValue, */
+    SetToValue,
     /// Clears the screen.
     ///
     /// Represented by `00E0`.
@@ -86,11 +88,11 @@ pub enum Instruction {
     SetIndexRegister { nnn: u16 },
     /// Represented by `DXYN`.
     Draw { vx: u8, vy: u8, n: u8 },
-    /* /// Represented by `FFFF`.
+    /// A value that does not represent any instruction.
     ///
-    /// Does not appear to do anything, but we still see it in
-    /// programs.
-    Unknown */
+    /// If a raw instruction parses into this, it is
+    /// erroneous.
+    Unknown,
 }
 
 impl Instruction {
