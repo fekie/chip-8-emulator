@@ -9,8 +9,8 @@ mod instruction;
 mod memory;
 mod screen;
 
-const WIDTH: u32 = 64;
-const HEIGHT: u32 = 32;
+pub const WIDTH: u32 = 64;
+pub const HEIGHT: u32 = 32;
 
 /// An error used for errors related to the operation of the CHIP-8 emulator.
 #[allow(missing_docs)]

@@ -1,4 +1,5 @@
 use chip_8::Chip8;
+use chip_8::{HEIGHT, WIDTH};
 use clap::Parser;
 use env_logger::Env;
 use log::error;
