@@ -32,12 +32,7 @@ impl Screen {
     /// 0 for black). This is important as we change the value
     /// of VF to 1 if we turned a pixel off that used to be on.
     pub fn invert(&mut self, x: u8, y: u8) -> bool {
-        //dbg!(x, y);
         let address = (y as usize * WIDTH as usize) + x as usize;
-
-        //dbg!(address);
-
-        //dbg!(x, y, address);
 
         let new_state = self.0[address] != 1;
         self.0[address] = new_state as u8;
