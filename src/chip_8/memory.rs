@@ -1,4 +1,6 @@
-use crate::chip_8::Chip8Error;
+use crate::chip_8::{Chip8, Chip8Error, EmulatorState};
+
+use super::stack;
 
 /// The address where our program starts in memory
 pub(crate) const PROGRAM_OFFSET: usize = 0x200;
@@ -82,6 +84,55 @@ impl Memory {
             self.set_byte(current_memory_address, byte);
 
             current_memory_address += 1;
+        }
+
+        Ok(())
+    }
+}
+
+impl Chip8 {
+    /// Initializes the emulator's system memory and loads fonts into memory.
+    /// You can now load a program with [`Self::load_program`].
+    pub fn initialize(&mut self) -> Result<(), Chip8Error> {
+        self.program_counter = PROGRAM_OFFSET as u16;
+
+        // Set the stack pointer to the value just under the stack, so that the
+        // next push starts at bottom of the stack window.
+        self.stack_pointer = stack::STACK_WINDOW_BOTTOM + 1;
+
+        self.memory.load_font_set()?;
+
+        self.emulator_state
+            .change_states(EmulatorState::InterpreterMemoryInitialized)?;
+
+        // Screen memory is already initialized.
+        // The actual screen window is initialized in the main function
+
+        Ok(())
+    }
+
+    /// Loads a program into memory from raw bytes. Requires that [`Self::initialize`]
+    /// has been called. You can now start emulation cycles with [`Self::cycle`].
+    ///
+    /// To load a new program, simply call [`Self::load_program`] again..
+    pub fn load_program(&mut self, program_bytes: Vec<u8>) -> Result<(), Chip8Error> {
+        self.emulator_state
+            .change_states(EmulatorState::ProgramLoaded)?;
+
+        // We load it in starting at the program offset.
+        let mut current_memory_address = PROGRAM_OFFSET;
+
+        for byte in program_bytes {
+            self.memory.set_byte(current_memory_address, byte);
+
+            current_memory_address += 1;
+        }
+
+        // We clear out the rest of the bytes and variables as well so that
+        // nothing interferes with this program (under the assumption that this
+        // can be called multiple times to switch programs).
+        for address in current_memory_address..MEMORY_SIZE {
+            self.memory.set_byte(address, 0);
         }
 
         Ok(())

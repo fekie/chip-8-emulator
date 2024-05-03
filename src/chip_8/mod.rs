@@ -8,6 +8,7 @@ use memory::Memory;
 mod instruction;
 mod memory;
 mod screen;
+mod stack;
 
 pub const WIDTH: u32 = 64;
 pub const HEIGHT: u32 = 32;
@@ -16,17 +17,17 @@ pub const HEIGHT: u32 = 32;
 #[allow(missing_docs)]
 #[derive(Debug, thiserror::Error)]
 pub enum Chip8Error {
-    #[error("Interpreter memory is uninitialized.")]
+    #[error("Interpreter memory is uninitialized")]
     InterpreterMemoryIsUninitialized,
-    #[error("Interpreter memory already initialized.")]
+    #[error("Interpreter memory already initialized")]
     InterpreterMemoryAlreadyInitialized,
-    #[error("Program not loaded.")]
+    #[error("Program not loaded")]
     ProgramNotLoaded,
+    #[error("Stack overflow")]
+    StackOverflow,
+    #[error("Stack underflow")]
+    StackUnderflow,
 }
-
-/// We go with a 32 word stack
-#[derive(Debug, Default)]
-struct Stack([u16; 32]);
 
 /// A timer that counts down at 60Hz. If above 0, the timer will be "active"
 /// and count down to 0. At this point, a sound plays.  
@@ -97,11 +98,11 @@ pub struct Chip8 {
     index_register: u16,
     /// Points to the next instruction.
     program_counter: u16,
+    /// Points to the top of the stack.
+    stack_pointer: u16,
     delay_timer: DelayTimer,
     /// See [`SoundTimer`] for more information.
     sound_timer: SoundTimer,
-    /// See [`Stack`] for more information.
-    stack: Stack,
     /// See [`Keypad`] for more information.
     keypad: Keypad,
     emulator_state: EmulatorState,
@@ -112,48 +113,6 @@ impl Chip8 {
     /// to with [`Self::initialize`] to load programs.
     pub fn new() -> Self {
         Self::default()
-    }
-
-    /// Initializes the emulator's system memory and screen. You can now load a program
-    /// with [`Self::load_program`].
-    pub fn initialize(&mut self) -> Result<(), Chip8Error> {
-        self.program_counter = memory::PROGRAM_OFFSET as u16;
-        self.memory.load_font_set()?;
-
-        self.emulator_state
-            .change_states(EmulatorState::InterpreterMemoryInitialized)?;
-
-        // Screen memory is already initialized.
-        // The actual screen window is initialized in the main function
-
-        Ok(())
-    }
-
-    /// Loads a program into memory from raw bytes. Requires that [`Self::initialize`]
-    /// has been called. You can now start emulation cycles with [`Self::cycle`].
-    ///
-    /// To load a new program, simply call [`Self::load_program`] again..
-    pub fn load_program(&mut self, program_bytes: Vec<u8>) -> Result<(), Chip8Error> {
-        self.emulator_state
-            .change_states(EmulatorState::ProgramLoaded)?;
-
-        // We load it in starting at the program offset.
-        let mut current_memory_address = memory::PROGRAM_OFFSET;
-
-        for byte in program_bytes {
-            self.memory.set_byte(current_memory_address, byte);
-
-            current_memory_address += 1;
-        }
-
-        // We clear out the rest of the bytes and variables as well so that
-        // nothing interferes with this program (under the assumption that this
-        // can be called multiple times to switch programs).
-        for address in current_memory_address..memory::MEMORY_SIZE {
-            self.memory.set_byte(address, 0);
-        }
-
-        Ok(())
     }
 
     /// Runs a moves the emulator state by one cycle. Requires both the interpreter memory

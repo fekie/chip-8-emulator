@@ -38,7 +38,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     chip_8.initialize()?;
 
     let program_bytes = std::fs::read(args.rom)?;
-
     chip_8.load_program(program_bytes.clone())?;
 
     // Hang on to this example for dear life:
