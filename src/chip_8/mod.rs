@@ -27,6 +27,18 @@ pub enum Chip8Error {
     StackOverflow,
     #[error("Stack underflow")]
     StackUnderflow,
+    /// Triggered when the emulator encounters instruction 0NNN.
+    /// This would normally pause the chip-8 interpreter and run
+    /// hardware-dependant code, and is not used for the majority of roms.
+    #[error("Program not compatible")]
+    ProgramNotCompatible,
+    /// Used when the raw word does not translate to an instruction,
+    /// like 0xFFFF.
+    #[error("Invalid Instruction 0x{instruction:04X}")]
+    InvalidInstruction { instruction: u16 },
+    /// Used when the execution code for an instruction is unimplemented.
+    #[error("Unimplemented instruction {instruction:#?}")]
+    UnimplementedInstruction { instruction: Instruction },
 }
 
 /// A timer that counts down at 60Hz. If above 0, the timer will be "active"
@@ -124,8 +136,8 @@ impl Chip8 {
         }
 
         let raw = self.fetch();
-        let instruction = self.decode(raw);
-        self.execute(instruction);
+        let instruction = self.decode(raw)?;
+        self.execute(instruction)?;
 
         Ok(())
     }
@@ -142,29 +154,31 @@ impl Chip8 {
     }
 
     /// Decodes the instruction word into an [`Instruction`]
-    fn decode(&self, raw: u16) -> Instruction {
+    fn decode(&self, raw: u16) -> Result<Instruction, Chip8Error> {
         Instruction::new(raw)
     }
 
     /// Executes the provided instruction.
-    fn execute(&mut self, instruction: Instruction) {
+    fn execute(&mut self, instruction: Instruction) -> Result<(), Chip8Error> {
         match instruction {
             Instruction::Clear => self.screen.clear(),
             Instruction::Jump { nnn } => {
                 self.program_counter = nnn;
             }
-            Instruction::SetRegister { vx, nn } => {
+            Instruction::SetImmediate { vx, nn } => {
                 self.registers[vx as usize] = nn;
             }
-            Instruction::AddToRegisterVx { vx, nn } => {
+            Instruction::AddImmediate { vx, nn } => {
                 self.registers[vx as usize] += nn;
             }
             Instruction::SetIndexRegister { nnn } => {
                 self.index_register = nnn;
             }
             Instruction::Draw { vx, vy, n } => self.instruction_draw(vx, vy, n),
-            _ => unimplemented!(),
+            _ => return Err(Chip8Error::UnimplementedInstruction { instruction }),
         }
+
+        Ok(())
     }
 
     fn instruction_draw(&mut self, vx: u8, vy: u8, n: u8) {
