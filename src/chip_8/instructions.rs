@@ -170,21 +170,48 @@ impl Instruction {
                 let last_nibble = (raw & 0x000F) as u8;
 
                 match last_nibble {
-                    0x0 => Instruction::Copy { vx, vy },
-                    0x1 => Instruction::BitwiseOr { vx, vy },
-                    0x2 => Instruction::BitwiseAnd { vx, vy },
-                    0x3 => Instruction::BitwiseXor { vx, vy },
-                    0x4 => Instruction::Add { vx, vy },
-                    0x5 => Instruction::Subtract { vx, vy },
-                    0x6 => Instruction::RightShift { vx },
-                    0x7 => Instruction::SetVxToVyMinusVx { vx, vy },
-                    0xE => Instruction::LeftShift { vx },
+                    0x0 => Self::Copy { vx, vy },
+                    0x1 => Self::BitwiseOr { vx, vy },
+                    0x2 => Self::BitwiseAnd { vx, vy },
+                    0x3 => Self::BitwiseXor { vx, vy },
+                    0x4 => Self::Add { vx, vy },
+                    0x5 => Self::Subtract { vx, vy },
+                    0x6 => Self::RightShift { vx },
+                    0x7 => Self::SetVxToVyMinusVx { vx, vy },
+                    0xE => Self::LeftShift { vx },
                     _ => return Err(Chip8Error::InvalidInstruction { instruction: raw }),
                 }
             }
             0x9 => Self::SkipIfRegisterVxNotEqualsVy { vx, vy },
             0xA => Self::SetIndexRegister { nnn },
+            0xB => Self::JumpWithPcOffset { nnn },
+            0xC => Self::Random { vx, nn },
             0xD => Self::Draw { vx, vy, n },
+            0xE => {
+                let last_byte = (raw & 0x00FF) as u8;
+
+                match last_byte {
+                    0x9E => Self::SkipIfKeyPressed { vx },
+                    0xA1 => Self::SkipIfKeyNotPressed { vx },
+                    _ => return Err(Chip8Error::InvalidInstruction { instruction: raw }),
+                }
+            }
+            0xF => {
+                let last_byte = (raw & 0x00FF) as u8;
+
+                match last_byte {
+                    0x07 => Self::SetVxToDelayTimer { vx },
+                    0x0A => Self::AwaitKeyInput { vx },
+                    0x15 => Self::SetDelayTimer { vx },
+                    0x18 => Self::SetSoundTimer { vx },
+                    0x1E => Self::AddToIndex { vx },
+                    0x29 => Self::SetIndexToFontCharacter { vx },
+                    0x33 => Self::SetIndexToBinaryCodedVx { vx },
+                    0x55 => Self::DumpRegisters { vx },
+                    0x65 => Self::LoadRegisters { vx },
+                    _ => return Err(Chip8Error::InvalidInstruction { instruction: raw }),
+                }
+            }
             _ => return Err(Chip8Error::InvalidInstruction { instruction: raw }),
         };
 
