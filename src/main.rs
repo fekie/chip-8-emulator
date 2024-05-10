@@ -5,6 +5,7 @@ use env_logger::Env;
 use log::error;
 use pixels::{Pixels, SurfaceTexture};
 use std::io::Write;
+
 use winit::{
     dpi::LogicalSize,
     event::{Event, VirtualKeyCode},
