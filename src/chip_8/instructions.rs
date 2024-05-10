@@ -86,7 +86,7 @@ pub enum Instruction {
     SetVxToVyMinusVx { vx: u8, vy: u8 },
     /// Represented by `8XYE`
     LeftShift { vx: u8 },
-    /// Represented by 5XY0.
+    /// Represented by 9XY0.
     ///
     /// Skips over the instruction if register VX != VY.
     SkipIfRegisterVxNotEqualsVy { vx: u8, vy: u8 },
@@ -137,6 +137,14 @@ impl Instruction {
         //println!("{:04X}", first_nibble);
         //println!("0x{:04X}", raw);
 
+        // These arguments are in the same location in memory each time,
+        // so it's just cleaner to write them all up here.
+        let vx = ((raw & 0x0F00) >> 8) as u8;
+        let vy = ((raw & 0x00F0) >> 4) as u8;
+        let nnn = raw & 0x0FFF;
+        let nn = (raw & 0x00FF) as u8;
+        let n = (raw & 0x000F) as u8;
+
         let instruction = match first_nibble {
             0x0 => {
                 let last_byte = raw & 0x00FF;
@@ -151,35 +159,32 @@ impl Instruction {
                     _ => return Err(Chip8Error::ProgramNotCompatible),
                 }
             }
-            0x1 => Self::Jump { nnn: raw & 0x0FFF },
-            0x2 => Self::Call { nnn: raw & 0x0FFF },
-            0x3 => Self::SkipIfRegisterEquals {
-                vx: ((raw & 0x0F00) >> 8) as u8,
-                nn: (raw & 0x00FF) as u8,
-            },
-            0x4 => Self::SkipIfRegisterNotEquals {
-                vx: ((raw & 0x0F00) >> 8) as u8,
-                nn: (raw & 0x00FF) as u8,
-            },
-            0x5 => Self::SkipIfRegisterVxEqualsVy {
-                vx: ((raw & 0x0F00) >> 8) as u8,
-                vy: ((raw & 0x00F0) >> 4) as u8,
-            },
-            0x6 => Self::SetImmediate {
-                vx: ((raw & 0x0F00) >> 8) as u8,
-                nn: (raw & 0x00FF) as u8,
-            },
-            0x7 => Self::AddImmediate {
-                vx: ((raw & 0x0F00) >> 8) as u8,
-                nn: (raw & 0x00FF) as u8,
-            },
+            0x1 => Self::Jump { nnn },
+            0x2 => Self::Call { nnn },
+            0x3 => Self::SkipIfRegisterEquals { vx, nn },
+            0x4 => Self::SkipIfRegisterNotEquals { vx, nn },
+            0x5 => Self::SkipIfRegisterVxEqualsVy { vx, vy },
+            0x6 => Self::SetImmediate { vx, nn },
+            0x7 => Self::AddImmediate { vx, nn },
+            0x8 => {
+                let last_nibble = (raw & 0x000F) as u8;
 
-            0xA => Self::SetIndexRegister { nnn: raw & 0x0FFF },
-            0xD => Self::Draw {
-                vx: ((raw & 0x0F00) >> 8) as u8,
-                vy: ((raw & 0x00F0) >> 4) as u8,
-                n: (raw & 0x000F) as u8,
-            },
+                match last_nibble {
+                    0x0 => Instruction::Copy { vx, vy },
+                    0x1 => Instruction::BitwiseOr { vx, vy },
+                    0x2 => Instruction::BitwiseAnd { vx, vy },
+                    0x3 => Instruction::BitwiseXor { vx, vy },
+                    0x4 => Instruction::Add { vx, vy },
+                    0x5 => Instruction::Subtract { vx, vy },
+                    0x6 => Instruction::RightShift { vx },
+                    0x7 => Instruction::SetVxToVyMinusVx { vx, vy },
+                    0xE => Instruction::LeftShift { vx },
+                    _ => return Err(Chip8Error::InvalidInstruction { instruction: raw }),
+                }
+            }
+            0x9 => Self::SkipIfRegisterVxNotEqualsVy { vx, vy },
+            0xA => Self::SetIndexRegister { nnn },
+            0xD => Self::Draw { vx, vy, n },
             _ => return Err(Chip8Error::InvalidInstruction { instruction: raw }),
         };
 
