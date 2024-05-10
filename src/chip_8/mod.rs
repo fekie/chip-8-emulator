@@ -254,6 +254,7 @@ impl Chip8 {
             }
             Instruction::JumpWithPcOffset { nnn } => {
                 self.program_counter = self.registers[0x0 as usize] as u16 + nnn;
+                
             }
 
             _ => return Err(Chip8Error::UnimplementedInstruction { instruction }),
