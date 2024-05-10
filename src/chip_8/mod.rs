@@ -177,45 +177,83 @@ impl Chip8 {
             Instruction::Draw { vx, vy, n } => self.instruction_draw(vx, vy, n),
             Instruction::Copy { vx, vy } => {
                 self.registers[vx as usize] = self.registers[vy as usize]
-            },
-            Instruction::BitwiseOr {vx, vy} => {
-                self.registers[vx as usize] = self.registers[vx as usize] | self.registers[vy as usize]
-            },
+            }
+            Instruction::BitwiseOr { vx, vy } => {
+                self.registers[vx as usize] =
+                    self.registers[vx as usize] | self.registers[vy as usize]
+            }
             Instruction::BitwiseAnd { vx, vy } => {
-                self.registers[vx as usize] = self.registers[vx as usize] & self.registers[vy as usize]
-            },
+                self.registers[vx as usize] =
+                    self.registers[vx as usize] & self.registers[vy as usize]
+            }
             Instruction::BitwiseXor { vx, vy } => {
-                self.registers[vx as usize] = self.registers[vx as usize] ^ self.registers[vy as usize]
-            },
+                self.registers[vx as usize] =
+                    self.registers[vx as usize] ^ self.registers[vy as usize]
+            }
             Instruction::Add { vx, vy } => {
-                let wrapped_sum =  self.registers[vx as usize].wrapping_add(self.registers[vy as usize]);
+                let wrapped_sum =
+                    self.registers[vx as usize].wrapping_add(self.registers[vy as usize]);
 
-                let overflow_occured =  self.registers[vx as usize].checked_add(self.registers[vy as usize]).is_none();
+                let overflow_occured = self.registers[vx as usize]
+                    .checked_add(self.registers[vy as usize])
+                    .is_none();
 
                 self.registers[vx as usize] = wrapped_sum;
                 self.registers[0xF] = overflow_occured as u8;
-            },
+            }
             Instruction::Subtract { vx, vy } => {
-                let wrapped_sum =  self.registers[vx as usize].wrapping_sub(self.registers[vy as usize]);
+                let wrapped_sum =
+                    self.registers[vx as usize].wrapping_sub(self.registers[vy as usize]);
 
-                let underflow_occured =  self.registers[vx as usize].checked_sub(self.registers[vy as usize]).is_none();
+                let underflow_occured = self.registers[vx as usize]
+                    .checked_sub(self.registers[vy as usize])
+                    .is_none();
 
                 self.registers[vx as usize] = wrapped_sum;
                 self.registers[0xF] = underflow_occured as u8;
-
-            },
+            }
             Instruction::RightShift { vx } => {
                 let most_significant = self.registers[vx as usize] & 0b0000_0001;
                 self.registers[0xF] = most_significant;
                 self.registers[vx as usize] >>= 1;
-            },
+            }
             Instruction::LeftShift { vx } => {
                 let most_significant = self.registers[vx as usize] & 0b1000_0000;
                 self.registers[0xF] = most_significant;
                 self.registers[vx as usize] <<= 1;
             }
             Instruction::Random { vx, nn } => {
-                self.registers[vx as usize] = rand::Rng::gen_range(&mut rand::thread_rng(), 0..255) & self.registers[nn as usize]
+                self.registers[vx as usize] = rand::Rng::gen_range(&mut rand::thread_rng(), 0..255)
+                    & self.registers[nn as usize]
+            }
+            Instruction::SetVxToVyMinusVx { vx, vy } => {
+                let wrapped_sum =
+                    self.registers[vy as usize].wrapping_sub(self.registers[vx as usize]);
+
+                let underflow_occured = self.registers[vy as usize]
+                    .checked_sub(self.registers[vx as usize])
+                    .is_none();
+
+                self.registers[vx as usize] = wrapped_sum;
+                self.registers[0xF] = underflow_occured as u8;
+            },
+            Instruction::SkipIfRegisterEquals { vx, nn } => {
+                if self.registers[vx as usize] == nn {
+                    self.program_counter = self.program_counter + 1;
+                }
+            },
+            Instruction::SkipIfRegisterNotEquals { vx, nn } => {
+                if self.registers[vx as usize] != nn {
+                    self.program_counter = self.program_counter + 1;
+                }
+            }
+            Instruction::SkipIfRegisterVxEqualsVy { vx, vy } => {
+                if self.registers[vx as usize] != self.registers[vy as usize] {
+                    self.program_counter = self.program_counter + 1;
+                }
+            },
+            Instruction::JumpWithPcOffset { nnn } => {
+                self.program_counter = self.registers[0x0 as usize] as u16 + nnn;
             }
             
             _ => return Err(Chip8Error::UnimplementedInstruction { instruction }),
