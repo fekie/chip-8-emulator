@@ -76,54 +76,111 @@ pub enum Instruction {
     /// Copies register VY to VX.
     Copy { vx: u8, vy: u8 },
     /// Represented by `8XY1`
+    ///
+    /// Sets VX = VX | VY
     BitwiseOr { vx: u8, vy: u8 },
     /// Represented by `8XY2`
+    ///
+    /// Sets VX = VX & VY
     BitwiseAnd { vx: u8, vy: u8 },
     /// Represented by `8XY3`
+    ///
+    /// Sets VX = VX ^ VY
     BitwiseXor { vx: u8, vy: u8 },
     /// Represented by `8XY4`
+    ///
+    /// Sets VX = VX + VY. Sets VF to 1 if there is an overflow (and
+    /// 0 if there is not).
     Add { vx: u8, vy: u8 },
     /// Represented by `8XY5`
+    ///
+    /// Sets VX = VX - VY. Sets VF to 0 if there is an underflow (and 1
+    /// if there is not.)
     Subtract { vx: u8, vy: u8 },
     /// Represented by `8XY6`
+    ///
+    /// Stores the least significant bit in VF and bitshifts the value
+    /// right by 1.
     RightShift { vx: u8 },
     /// Represented by `8XY7`
+    ///
+    /// Sets VX = VY - VX. VF is set to 1 if there is an underflow, and
+    /// is set to 0 if there is not.
     SetVxToVyMinusVx { vx: u8, vy: u8 },
-    /// Represented by `8XYE`
+    /// Represented by `8XYE```
     LeftShift { vx: u8 },
     /// Represented by 9XY0.
     ///
     /// Skips over the instruction if register VX != VY.
     SkipIfRegisterVxNotEqualsVy { vx: u8, vy: u8 },
     /// Represented by `ANNN`.
+    ///
+    /// Sets the index register to NNN.
     SetIndexRegister { nnn: u16 },
     /// Represented by `BNNN`.
+    ///
+    /// Sets the program counter to V0 + NNN
     JumpWithPcOffset { nnn: u16 },
     /// Represented by `CXNN`.
+    ///
+    /// Sets VX to the result of bitwise AND operation between a random number (who's
+    /// values are within 0..=255) and NN.
     Random { vx: u8, nn: u8 },
     /// Represented by `DXYN`.
+    ///
+    /// Draws a sprite at coordinates (VX, VY) that has width of 8 pixels and a
+    /// height of N pixels. Each row of 8 pixels is read as bit coded (so 1 byte per row),
+    /// starting from the memory location in the index register. VF is set to 1 if any
+    /// screen pixels are flipped from set to unset when the sprite is drawn, and 0 otherwise.
     Draw { vx: u8, vy: u8, n: u8 },
     /// Represented by `EX9E`.
+    ///
+    /// Skip next instruction if the key stored in VX is pressed.
     SkipIfKeyPressed { vx: u8 },
     /// Represented by `EXA1`.
+    ///
+    /// Skip next instruction if the key stored in VX is not pressed.
     SkipIfKeyNotPressed { vx: u8 },
     /// Represented by `FX07`.
+    ///
+    /// Sets VX to the value of the delay timer.
     SetVxToDelayTimer { vx: u8 },
     /// Represented by `FX0A`.
+    ///
+    /// A key press is awaited, and then stored in VX.
     AwaitKeyInput { vx: u8 },
     /// Represented by `FX15`.
+    ///
+    /// Sets the delay timer to VX.
     SetDelayTimer { vx: u8 },
     /// Represented by `FX18`.
+    ///
+    /// Sets the sound timer to VX.
     SetSoundTimer { vx: u8 },
     /// Represented by `FX1E`.
+    ///
+    /// Adds VX to the index register.
     AddToIndex { vx: u8 },
     /// Represented by `FX29`.
+    ///
+    /// Sets the index register to the memory location for the character
+    /// stored in VX.
     SetIndexToFontCharacter { vx: u8 },
     /// Represented by `FX33`.
+    ///
+    /// Stores the binary-coded decimal representation of VX, with the
+    /// hundreds digit in memory at location in I, the tens digit at
+    /// location I+1, and the ones digit at location I+2
     SetIndexToBinaryCodedVx { vx: u8 },
     /// Represented by `FX55`.
+    ///
+    /// Stores the registers from V0 to VX (including VX) in memory, starting at
+    /// the address stored in the index register. (mem[I] = V0, mem[I+1] = V1, ...)
     DumpRegisters { vx: u8 },
     /// Represented by `FX65`.
+    ///
+    /// Loads the values V0 to VX (including VX) from memory. starting at
+    /// the address stored in the index register. (V0 = mem[I], V1 = mem[I+1], ...)
     LoadRegisters { vx: u8 },
     /// A value that does not represent any instruction.
     ///

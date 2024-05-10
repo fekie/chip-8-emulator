@@ -195,12 +195,12 @@ impl Chip8 {
                 let wrapped_sum =
                     self.registers[vx as usize].wrapping_add(self.registers[vy as usize]);
 
-                let overflow_occured = self.registers[vx as usize]
+                let overflow_ocurred = self.registers[vx as usize]
                     .checked_add(self.registers[vy as usize])
                     .is_none();
 
                 self.registers[vx as usize] = wrapped_sum;
-                self.registers[0xF] = overflow_occured as u8;
+                self.registers[0xF] = overflow_ocurred as u8;
             }
             Instruction::Subtract { vx, vy } => {
                 let wrapped_sum =
