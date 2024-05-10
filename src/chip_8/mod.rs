@@ -161,7 +161,11 @@ impl Chip8 {
     /// Executes the provided instruction.
     fn execute(&mut self, instruction: Instruction) -> Result<(), Chip8Error> {
         match instruction {
+            Instruction::CallMachineCodeRoutine => {
+                return Err(Chip8Error::UnimplementedInstruction { instruction })
+            }
             Instruction::Clear => self.screen.clear(),
+
             Instruction::Jump { nnn } => {
                 self.program_counter = nnn;
             }
@@ -173,6 +177,27 @@ impl Chip8 {
             }
             Instruction::SetIndexRegister { nnn } => {
                 self.index_register = nnn;
+            }
+            Instruction::Copy { vx, vy } => {
+                self.registers[vx as usize] = self.registers[vy as usize]
+            }
+            Instruction::Add { vx, vy } => {
+                // Let the addition wrap around in the case of overflow,
+                // but record that there was an overflow if it happens.
+                let wrapped_sum =
+                    self.registers[vx as usize].wrapping_add(self.registers[vy as usize]);
+
+                let overflow_ocurred = self.registers[vx as usize]
+                    .checked_add(self.registers[vy as usize])
+                    .is_none();
+
+                self.registers[vx as usize] = wrapped_sum;
+                self.registers[0xF] = overflow_ocurred as u8;
+            }
+            Instruction::RightShift { vx } => {
+                let least_significant = self.registers[vx as usize] & 0b0000_0001;
+                self.registers[0xF] = least_significant;
+                self.registers[vx as usize] >>= 1;
             }
             Instruction::Draw { vx, vy, n } => self.instruction_draw(vx, vy, n),
             _ => return Err(Chip8Error::UnimplementedInstruction { instruction }),

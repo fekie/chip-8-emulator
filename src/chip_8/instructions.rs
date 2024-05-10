@@ -28,6 +28,7 @@ pub enum Instruction {
     /// This will remain unimplemented as it was used to pause
     /// the chip-8 interpreter and run hardware specific code,
     /// which was not used for most games.
+    #[allow(dead_code)]
     CallMachineCodeRoutine,
     /// Represented by `00E0`.
     ///
@@ -67,8 +68,12 @@ pub enum Instruction {
     #[allow(missing_docs)]
     SetImmediate { vx: u8, nn: u8 },
     /// Represented by `7XNN`.
+    ///
+    /// Adds the value NN to register VX.
     AddImmediate { vx: u8, nn: u8 },
     /// Represented by `8XY0`
+    ///
+    /// Copies register VY to VX.
     Copy { vx: u8, vy: u8 },
     /// Represented by `8XY1`
     BitwiseOr { vx: u8, vy: u8 },
