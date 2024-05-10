@@ -246,6 +246,7 @@ impl Chip8 {
                 if self.registers[vx as usize] != nn {
                     self.program_counter = self.program_counter + 1;
                 }
+                
             }
             Instruction::SkipIfRegisterVxEqualsVy { vx, vy } => {
                 if self.registers[vx as usize] != self.registers[vy as usize] {
@@ -255,7 +256,7 @@ impl Chip8 {
             Instruction::JumpWithPcOffset { nnn } => {
                 self.program_counter = self.registers[0x0 as usize] as u16 + nnn;
             }
-            
+
             _ => return Err(Chip8Error::UnimplementedInstruction { instruction }),
         }
 
