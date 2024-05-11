@@ -2,7 +2,7 @@
 
 #![warn(missing_docs, missing_debug_implementations)]
 
-use self::{instructions::Instruction, screen::Screen};
+use self::{instructions::Instruction, screen::Screen, sound::play_buzzer};
 use memory::Memory;
 
 mod instructions;
@@ -10,7 +10,7 @@ pub(crate) mod keypad;
 mod memory;
 mod screen;
 mod stack;
-
+pub(crate) mod sound;
 pub const WIDTH: u32 = 64;
 pub const HEIGHT: u32 = 32;
 
@@ -44,13 +44,13 @@ pub enum Chip8Error {
 
 /// A timer that counts down at 60Hz. If above 0, the timer will be "active"
 /// and count down to 0. At this point, a sound plays.  
-#[derive(Debug, Default)]
-struct DelayTimer(u8);
+#[derive(Debug, Default, Copy, Clone)]
+pub struct DelayTimer(pub u8);
 
 /// A timer that counts down at 60Hz. If above 0, the timer will be "active"
 /// and count down to 0. At this point, a sound plays.  
-#[derive(Debug, Default)]
-struct SoundTimer(u8);
+#[derive(Debug, Default, Copy, Clone)]
+pub struct SoundTimer(pub u8);
 
 /// Stores the state of the hex keypad, which goes from 0x0 to 0xF.
 #[derive(Debug, Default)]
@@ -115,9 +115,9 @@ pub struct Chip8 {
     program_counter: u16,
     /// Points to the top of the stack.
     stack_pointer: u16,
-    delay_timer: DelayTimer,
+    pub delay_timer: DelayTimer,
     /// See [`SoundTimer`] for more information.
-    sound_timer: SoundTimer,
+    pub sound_timer: SoundTimer,
     /// See [`Keypad`] for more information.
     keypad: Keypad,
     emulator_state: EmulatorState,
@@ -266,7 +266,7 @@ impl Chip8 {
                         if value == self.registers[vx as usize] {
                             self.program_counter += 1;
                             //Erase the keypad code after its used for this op
-                            self.update_keypad(None);
+                            self.keypad.update_keypad(None);
                         }
                     }
                     //Do nothing really if not keypress is detected
@@ -279,7 +279,7 @@ impl Chip8 {
                         if value != self.registers[vx as usize] {
                             self.program_counter += 1;
                             //Erase the keypad code after its used for this op
-                            self.update_keypad(None);
+                            self.keypad.update_keypad(None);
                         }
                     }
                     //Do nothing really if not keypress is detected
@@ -292,21 +292,48 @@ impl Chip8 {
                     Some(value) => {
                         self.registers[vx as usize] = value;
                         //Erase the keypad code after its used for this op
-                        self.update_keypad(None);
+                        self.keypad.update_keypad(None);
                     }
                     //Do continue if not detected
                     None => self.program_counter -= 1,
                 }
+            },
+            Instruction::SetDelayTimer { vx } => {
+                self.delay_timer.0 = self.registers[vx as usize]
+            },
+            Instruction::SetSoundTimer { vx } => {
+                self.sound_timer.0 = self.registers[vx as usize]
+
+            },
+            Instruction::SetVxToDelayTimer { vx } => {
+
+                self.registers[vx as usize] = self.sound_timer.0
             }
+
 
             _ => return Err(Chip8Error::UnimplementedInstruction { instruction }),
         }
 
         Ok(())
     }
-    fn update_keypad(&mut self, keyvalue: Option<u8>) {
-        self.keypad = Keypad {
-            current_keycode: keyvalue,
+}
+impl SoundTimer {
+    pub fn decrement(&mut self) {
+        if self.0 > 0{
+        self.0 -= 1;
+        play_buzzer();
         }
+    }
+}
+impl DelayTimer {
+    pub fn decrement(&mut self) {
+        if self.0 > 0{
+        self.0 -= 1;
+        }
+    }
+}
+impl Keypad {
+    fn update_keypad(&mut self, keyvalue: Option<u8>) {
+        self.current_keycode = keyvalue;
     }
 }

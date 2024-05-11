@@ -5,7 +5,7 @@ use env_logger::Env;
 use log::error;
 use pixels::{Pixels, SurfaceTexture};
 use std::io::Write;
-
+use std::time::{Instant};
 use winit::{
     dpi::LogicalSize,
     event::{Event, VirtualKeyCode},
@@ -18,7 +18,7 @@ mod chip_8;
 
 // We scale everything up by a factor of 8
 const SCALE: u32 = 8;
-
+const HZ: u32 = 60;
 #[derive(clap::Parser, Debug)]
 struct Args {
     /// Path to the ROM that will be loaded.
@@ -63,6 +63,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Pixels::new(WIDTH, HEIGHT, surface_texture)?
     };
 
+    let dur = std::time::Duration::from_secs(1) / HZ;
+
+    let mut start = std::time::Instant::now();
+
+    let timer_closure = move || {
+        loop {
+            if start.elapsed() >= dur {
+                chip_8.delay_timer.decrement();
+                chip_8.sound_timer.decrement();
+                start = std::time::Instant::now();
+            }
+        }
+    };
+    //spawn a separate thread for the timers, handle used if needed
+    let _handle = std::thread::spawn(timer_closure);
+
     event_loop.run(move |event, _, mut control_flow| {
         // Draw the current frame
         if let Event::RedrawRequested(_) = event {
@@ -94,6 +110,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             chip_8.cycle().unwrap();
             window.request_redraw();
         }
+        
     });
 }
 
