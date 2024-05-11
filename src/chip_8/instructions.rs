@@ -51,7 +51,6 @@ pub enum Instruction {
     /// the stack.
     Call { nnn: u16 },
     /// Represented by 3XNN.
-    ///
     /// Skips over the instruction if register VX == NN.
     SkipIfRegisterEquals { vx: u8, nn: u8 },
     /// Represented by 4XNN.
@@ -63,7 +62,6 @@ pub enum Instruction {
     /// Skips over the instruction if register VX == VY.
     SkipIfRegisterVxEqualsVy { vx: u8, vy: u8 },
     /// Represented by `6XNN`.
-    ///
     /// Sets register VX to NN.
     #[allow(missing_docs)]
     SetImmediate { vx: u8, nn: u8 },
