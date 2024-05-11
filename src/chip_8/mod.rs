@@ -9,8 +9,8 @@ mod instructions;
 pub(crate) mod keypad;
 mod memory;
 mod screen;
-mod stack;
 pub(crate) mod sound;
+mod stack;
 pub const WIDTH: u32 = 64;
 pub const HEIGHT: u32 = 32;
 
@@ -297,19 +297,12 @@ impl Chip8 {
                     //Do continue if not detected
                     None => self.program_counter -= 1,
                 }
-            },
-            Instruction::SetDelayTimer { vx } => {
-                self.delay_timer.0 = self.registers[vx as usize]
-            },
-            Instruction::SetSoundTimer { vx } => {
-                self.sound_timer.0 = self.registers[vx as usize]
-
-            },
+            }
+            Instruction::SetDelayTimer { vx } => self.delay_timer.0 = self.registers[vx as usize],
+            Instruction::SetSoundTimer { vx } => self.sound_timer.0 = self.registers[vx as usize],
             Instruction::SetVxToDelayTimer { vx } => {
-
                 self.registers[vx as usize] = self.sound_timer.0
             }
-
 
             _ => return Err(Chip8Error::UnimplementedInstruction { instruction }),
         }
@@ -319,16 +312,16 @@ impl Chip8 {
 }
 impl SoundTimer {
     pub fn decrement(&mut self) {
-        if self.0 > 0{
-        self.0 -= 1;
-        play_buzzer();
+        if self.0 > 0 {
+            self.0 -= 1;
+            play_buzzer();
         }
     }
 }
 impl DelayTimer {
     pub fn decrement(&mut self) {
-        if self.0 > 0{
-        self.0 -= 1;
+        if self.0 > 0 {
+            self.0 -= 1;
         }
     }
 }

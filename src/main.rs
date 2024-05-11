@@ -5,7 +5,7 @@ use env_logger::Env;
 use log::error;
 use pixels::{Pixels, SurfaceTexture};
 use std::io::Write;
-use std::time::{Instant};
+use std::time::Instant;
 use winit::{
     dpi::LogicalSize,
     event::{Event, VirtualKeyCode},
@@ -67,13 +67,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut start = std::time::Instant::now();
 
-    let timer_closure = move || {
-        loop {
-            if start.elapsed() >= dur {
-                chip_8.delay_timer.decrement();
-                chip_8.sound_timer.decrement();
-                start = std::time::Instant::now();
-            }
+    let timer_closure = move || loop {
+        if start.elapsed() >= dur {
+            chip_8.delay_timer.decrement();
+            chip_8.sound_timer.decrement();
+            start = std::time::Instant::now();
         }
     };
     //spawn a separate thread for the timers, handle used if needed
@@ -95,7 +93,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         if input.update(&event) {
             // keyboard events
             crate::chip_8::keypad::handle_keyboard_input(&input, &mut control_flow);
-            
 
             // Resize the window
             if let Some(size) = input.window_resized() {
@@ -110,7 +107,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             chip_8.cycle().unwrap();
             window.request_redraw();
         }
-        
     });
 }
 
