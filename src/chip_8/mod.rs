@@ -6,6 +6,7 @@ use self::{instructions::Instruction, screen::Screen};
 use memory::Memory;
 
 mod instructions;
+pub(crate) mod keypad;
 mod memory;
 mod screen;
 mod stack;
@@ -53,7 +54,9 @@ struct SoundTimer(u8);
 
 /// Stores the state of the hex keypad, which goes from 0x0 to 0xF.
 #[derive(Debug, Default)]
-struct Keypad([u8; 0xF]);
+struct Keypad {
+    current_keycode: Option<u8>,
+}
 
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 enum EmulatorState {
@@ -256,13 +259,54 @@ impl Chip8 {
             }
             Instruction::JumpWithPcOffset { nnn } => {
                 self.program_counter = self.registers[0x0 as usize] as u16 + nnn;
-                
             }
-
+            Instruction::SkipIfKeyPressed { vx } => {
+                match self.keypad.current_keycode {
+                    Some(value) => {
+                        if value == self.registers[vx as usize] {
+                            self.program_counter += 1;
+                            //Erase the keypad code after its used for this op
+                            self.update_keypad(None);
+                        }
+                    }
+                    //Do nothing really if not keypress is detected
+                    None => (),
+                }
+            }
+            Instruction::SkipIfKeyNotPressed { vx } => {
+                match self.keypad.current_keycode {
+                    Some(value) => {
+                        if value != self.registers[vx as usize] {
+                            self.program_counter += 1;
+                            //Erase the keypad code after its used for this op
+                            self.update_keypad(None);
+                        }
+                    }
+                    //Do nothing really if not keypress is detected
+                    None => (),
+                }
+            }
+            Instruction::AwaitKeyInput { vx } => {
+                //Cannot use a loop here because the times still need to be ongoing, this will just halt code execution
+                match self.keypad.current_keycode {
+                    Some(value) => {
+                        self.registers[vx as usize] = value;
+                        //Erase the keypad code after its used for this op
+                        self.update_keypad(None);
+                    }
+                    //Do continue if not detected
+                    None => self.program_counter -= 1,
+                }
+            }
 
             _ => return Err(Chip8Error::UnimplementedInstruction { instruction }),
         }
 
         Ok(())
+    }
+    fn update_keypad(&mut self, keyvalue: Option<u8>) {
+        self.keypad = Keypad {
+            current_keycode: keyvalue,
+        }
     }
 }

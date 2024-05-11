@@ -63,7 +63,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Pixels::new(WIDTH, HEIGHT, surface_texture)?
     };
 
-    event_loop.run(move |event, _, control_flow| {
+    event_loop.run(move |event, _, mut control_flow| {
         // Draw the current frame
         if let Event::RedrawRequested(_) = event {
             chip_8.draw(pixels.frame_mut());
@@ -77,11 +77,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         // Handle input events
         if input.update(&event) {
-            // Close events
-            if input.key_pressed(VirtualKeyCode::Escape) || input.close_requested() {
-                *control_flow = ControlFlow::Exit;
-                return;
-            }
+            // keyboard events
+            crate::chip_8::keypad::handle_keyboard_input(&input, &mut control_flow);
+            
 
             // Resize the window
             if let Some(size) = input.window_resized() {
