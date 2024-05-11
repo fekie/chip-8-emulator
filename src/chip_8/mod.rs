@@ -168,9 +168,29 @@ impl Chip8 {
                 return Err(Chip8Error::UnimplementedInstruction { instruction })
             }
             Instruction::Clear => self.screen.clear(),
-
+            Instruction::Return => {
+                return Err(Chip8Error::UnimplementedInstruction { instruction })
+            }
             Instruction::Jump { nnn } => {
                 self.program_counter = nnn;
+            }
+            Instruction::Call { nnn } => {
+                return Err(Chip8Error::UnimplementedInstruction { instruction })
+            }
+            Instruction::SkipIfRegisterEquals { vx, nn } => {
+                if self.registers[vx as usize] == nn {
+                    self.program_counter += 1;
+                }
+            }
+            Instruction::SkipIfRegisterNotEquals { vx, nn } => {
+                if self.registers[vx as usize] != nn {
+                    self.program_counter += 1;
+                }
+            }
+            Instruction::SkipIfRegisterVxEqualsVy { vx, vy } => {
+                if self.registers[vx as usize] != self.registers[vy as usize] {
+                    self.program_counter += 1;
+                }
             }
             Instruction::SetImmediate { vx, nn } => {
                 self.registers[vx as usize] = nn;
@@ -178,14 +198,9 @@ impl Chip8 {
             Instruction::AddImmediate { vx, nn } => {
                 self.registers[vx as usize] += nn;
             }
-            Instruction::SetIndexRegister { nnn } => {
-                self.index_register = nnn;
-            }
             Instruction::Copy { vx, vy } => {
                 self.registers[vx as usize] = self.registers[vy as usize]
             }
-
-            Instruction::Draw { vx, vy, n } => self.instruction_draw(vx, vy, n),
             Instruction::BitwiseOr { vx, vy } => {
                 self.registers[vx as usize] |= self.registers[vy as usize]
             }
@@ -222,15 +237,6 @@ impl Chip8 {
                 self.registers[0xF] = least_significant;
                 self.registers[vx as usize] >>= 1;
             }
-            Instruction::LeftShift { vx } => {
-                let most_significant = self.registers[vx as usize] & 0b1000_0000;
-                self.registers[0xF] = most_significant;
-                self.registers[vx as usize] <<= 1;
-            }
-            Instruction::Random { vx, nn } => {
-                self.registers[vx as usize] = rand::Rng::gen_range(&mut rand::thread_rng(), 0..255)
-                    & self.registers[nn as usize]
-            }
             Instruction::SetVxToVyMinusVx { vx, vy } => {
                 let wrapped_sum =
                     self.registers[vy as usize].wrapping_sub(self.registers[vx as usize]);
@@ -242,24 +248,25 @@ impl Chip8 {
                 self.registers[vx as usize] = wrapped_sum;
                 self.registers[0xF] = underflow_occured as u8;
             }
-            Instruction::SkipIfRegisterEquals { vx, nn } => {
-                if self.registers[vx as usize] == nn {
-                    self.program_counter += 1;
-                }
+            Instruction::LeftShift { vx } => {
+                let most_significant = self.registers[vx as usize] & 0b1000_0000;
+                self.registers[0xF] = most_significant;
+                self.registers[vx as usize] <<= 1;
             }
-            Instruction::SkipIfRegisterNotEquals { vx, nn } => {
-                if self.registers[vx as usize] != nn {
-                    self.program_counter += 1;
-                }
+            Instruction::SkipIfRegisterVxNotEqualsVy { vx, vy } => {
+                return Err(Chip8Error::UnimplementedInstruction { instruction })
             }
-            Instruction::SkipIfRegisterVxEqualsVy { vx, vy } => {
-                if self.registers[vx as usize] != self.registers[vy as usize] {
-                    self.program_counter += 1;
-                }
+            Instruction::SetIndexRegister { nnn } => {
+                self.index_register = nnn;
             }
             Instruction::JumpWithPcOffset { nnn } => {
                 self.program_counter = self.registers[0x0 as usize] as u16 + nnn;
             }
+            Instruction::Random { vx, nn } => {
+                self.registers[vx as usize] = rand::Rng::gen_range(&mut rand::thread_rng(), 0..255)
+                    & self.registers[nn as usize]
+            }
+            Instruction::Draw { vx, vy, n } => self.instruction_draw(vx, vy, n),
             Instruction::SkipIfKeyPressed { vx } => {
                 match self.keypad.current_keycode {
                     Some(value) => {
@@ -286,6 +293,9 @@ impl Chip8 {
                     None => (),
                 }
             }
+            Instruction::SetVxToDelayTimer { vx } => {
+                self.registers[vx as usize] = self.sound_timer.0
+            }
             Instruction::AwaitKeyInput { vx } => {
                 //Cannot use a loop here because the times still need to be ongoing, this will just halt code execution
                 match self.keypad.current_keycode {
@@ -300,10 +310,12 @@ impl Chip8 {
             }
             Instruction::SetDelayTimer { vx } => self.delay_timer.0 = self.registers[vx as usize],
             Instruction::SetSoundTimer { vx } => self.sound_timer.0 = self.registers[vx as usize],
-            Instruction::SetVxToDelayTimer { vx } => {
-                self.registers[vx as usize] = self.sound_timer.0
-            }
-            _ => return Err(Chip8Error::UnimplementedInstruction { instruction }),
+            Instruction::AddToIndex { vx } => unimplemented!(),
+            Instruction::SetIndexToFontCharacter { vx } => unimplemented!(),
+            Instruction::SetIndexToBinaryCodedVx { vx } => unimplemented!(),
+            Instruction::DumpRegisters { vx } => unimplemented!(),
+            Instruction::LoadRegisters { vx } => unimplemented!(),
+            Instruction::Unknown => unimplemented!(),
         }
 
         Ok(())
