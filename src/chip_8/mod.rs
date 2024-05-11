@@ -244,17 +244,17 @@ impl Chip8 {
             }
             Instruction::SkipIfRegisterEquals { vx, nn } => {
                 if self.registers[vx as usize] == nn {
-                    self.program_counter = self.program_counter + 1;
+                    self.program_counter += 1;
                 }
             }
             Instruction::SkipIfRegisterNotEquals { vx, nn } => {
                 if self.registers[vx as usize] != nn {
-                    self.program_counter = self.program_counter + 1;
+                    self.program_counter += 1;
                 }
             }
             Instruction::SkipIfRegisterVxEqualsVy { vx, vy } => {
                 if self.registers[vx as usize] != self.registers[vy as usize] {
-                    self.program_counter = self.program_counter + 1;
+                    self.program_counter += 1;
                 }
             }
             Instruction::JumpWithPcOffset { nnn } => {
@@ -303,7 +303,6 @@ impl Chip8 {
             Instruction::SetVxToDelayTimer { vx } => {
                 self.registers[vx as usize] = self.sound_timer.0
             }
-
             _ => return Err(Chip8Error::UnimplementedInstruction { instruction }),
         }
 
