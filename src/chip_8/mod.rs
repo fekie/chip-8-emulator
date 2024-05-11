@@ -241,24 +241,22 @@ impl Chip8 {
             }
             Instruction::SkipIfRegisterEquals { vx, nn } => {
                 if self.registers[vx as usize] == nn {
-                    self.program_counter = self.program_counter + 1;
+                    self.program_counter += 1;
                 }
             }
             Instruction::SkipIfRegisterNotEquals { vx, nn } => {
                 if self.registers[vx as usize] != nn {
-                    self.program_counter = self.program_counter + 1;
+                    self.program_counter += 1;
                 }
             }
             Instruction::SkipIfRegisterVxEqualsVy { vx, vy } => {
                 if self.registers[vx as usize] != self.registers[vy as usize] {
-                    self.program_counter = self.program_counter + 1;
+                    self.program_counter += 1;
                 }
             }
             Instruction::JumpWithPcOffset { nnn } => {
-                self.program_counter = self.registers[0x0 as usize] as u16 + nnn;
-                
+                self.program_counter = self.registers[0x0] as u16 + nnn;
             }
-
 
             _ => return Err(Chip8Error::UnimplementedInstruction { instruction }),
         }
