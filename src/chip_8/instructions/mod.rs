@@ -2,7 +2,7 @@
 use super::Chip8Error;
 use crate::{Chip8, HEIGHT, WIDTH};
 
-mod execution;
+pub mod execution;
 
 /// A representation of all the CHIP-8 opcodes.
 ///

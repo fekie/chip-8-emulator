@@ -3,6 +3,7 @@
 #![warn(missing_docs, missing_debug_implementations)]
 
 use self::{instructions::Instruction, screen::Screen, sound::play_buzzer};
+use instructions::execution;
 use memory::Memory;
 
 mod instructions;
@@ -11,6 +12,7 @@ mod memory;
 mod screen;
 pub(crate) mod sound;
 mod stack;
+
 pub const WIDTH: u32 = 64;
 pub const HEIGHT: u32 = 32;
 
@@ -167,155 +169,55 @@ impl Chip8 {
             Instruction::CallMachineCodeRoutine => {
                 return Err(Chip8Error::UnimplementedInstruction { instruction })
             }
-            Instruction::Clear => self.screen.clear(),
-            Instruction::Return => {
-                return Err(Chip8Error::UnimplementedInstruction { instruction })
-            }
-            Instruction::Jump { nnn } => {
-                self.program_counter = nnn;
-            }
-            Instruction::Call { nnn } => {
-                return Err(Chip8Error::UnimplementedInstruction { instruction })
-            }
+            Instruction::Clear => self.instruction_clear(),
+            Instruction::Return => self.instruction_return(),
+            Instruction::Jump { nnn } => self.instruction_jump(nnn),
+            Instruction::Call { nnn } => self.instruction_call(nnn),
             Instruction::SkipIfRegisterEquals { vx, nn } => {
-                if self.registers[vx as usize] == nn {
-                    self.program_counter += 1;
-                }
+                self.instruction_skip_if_register_equals(vx, nn)
             }
             Instruction::SkipIfRegisterNotEquals { vx, nn } => {
-                if self.registers[vx as usize] != nn {
-                    self.program_counter += 1;
-                }
+                self.instruction_skip_if_register_not_equals(vx, nn)
             }
             Instruction::SkipIfRegisterVxEqualsVy { vx, vy } => {
-                if self.registers[vx as usize] != self.registers[vy as usize] {
-                    self.program_counter += 1;
-                }
+                self.instruction_skip_if_register_vx_equals_vy(vx, vy)
             }
-            Instruction::SetImmediate { vx, nn } => {
-                self.registers[vx as usize] = nn;
-            }
-            Instruction::AddImmediate { vx, nn } => {
-                self.registers[vx as usize] += nn;
-            }
-            Instruction::Copy { vx, vy } => {
-                self.registers[vx as usize] = self.registers[vy as usize]
-            }
-            Instruction::BitwiseOr { vx, vy } => {
-                self.registers[vx as usize] |= self.registers[vy as usize]
-            }
-            Instruction::BitwiseAnd { vx, vy } => {
-                self.registers[vx as usize] &= self.registers[vy as usize]
-            }
-            Instruction::BitwiseXor { vx, vy } => {
-                self.registers[vx as usize] ^= self.registers[vy as usize]
-            }
-            Instruction::Add { vx, vy } => {
-                let wrapped_sum =
-                    self.registers[vx as usize].wrapping_add(self.registers[vy as usize]);
-
-                let overflow_ocurred = self.registers[vx as usize]
-                    .checked_add(self.registers[vy as usize])
-                    .is_none();
-
-                self.registers[vx as usize] = wrapped_sum;
-                self.registers[0xF] = overflow_ocurred as u8;
-            }
-            Instruction::Subtract { vx, vy } => {
-                let wrapped_sum =
-                    self.registers[vx as usize].wrapping_sub(self.registers[vy as usize]);
-
-                let underflow_occurred = self.registers[vx as usize]
-                    .checked_sub(self.registers[vy as usize])
-                    .is_none();
-
-                self.registers[vx as usize] = wrapped_sum;
-                self.registers[0xF] = underflow_occurred as u8;
-            }
-            Instruction::RightShift { vx } => {
-                let least_significant = self.registers[vx as usize] & 0b0000_0001;
-                self.registers[0xF] = least_significant;
-                self.registers[vx as usize] >>= 1;
-            }
+            Instruction::SetImmediate { vx, nn } => self.instruction_set_immediate(vx, nn),
+            Instruction::AddImmediate { vx, nn } => self.instruction_add_immediate(vx, nn),
+            Instruction::Copy { vx, vy } => self.instruction_copy(vx, vy),
+            Instruction::BitwiseOr { vx, vy } => self.instruction_bitwise_or(vx, vy),
+            Instruction::BitwiseAnd { vx, vy } => self.instruction_bitwise_and(vx, vy),
+            Instruction::BitwiseXor { vx, vy } => self.instruction_bitwise_xor(vx, vy),
+            Instruction::Add { vx, vy } => self.instruction_add(vx, vy),
+            Instruction::Subtract { vx, vy } => self.instruction_subtract(vx, vy),
+            Instruction::RightShift { vx } => self.instruction_right_shift(vx),
             Instruction::SetVxToVyMinusVx { vx, vy } => {
-                let wrapped_sum =
-                    self.registers[vy as usize].wrapping_sub(self.registers[vx as usize]);
-
-                let underflow_occured = self.registers[vy as usize]
-                    .checked_sub(self.registers[vx as usize])
-                    .is_none();
-
-                self.registers[vx as usize] = wrapped_sum;
-                self.registers[0xF] = underflow_occured as u8;
+                self.instruction_set_vx_to_vy_minus_vx(vx, vy)
             }
-            Instruction::LeftShift { vx } => {
-                let most_significant = self.registers[vx as usize] & 0b1000_0000;
-                self.registers[0xF] = most_significant;
-                self.registers[vx as usize] <<= 1;
-            }
+            Instruction::LeftShift { vx } => self.instruction_left_shift(vx),
             Instruction::SkipIfRegisterVxNotEqualsVy { vx, vy } => {
-                return Err(Chip8Error::UnimplementedInstruction { instruction })
+                self.instruction_skip_if_register_vx_not_equals_vy(vx, vy)
             }
-            Instruction::SetIndexRegister { nnn } => {
-                self.index_register = nnn;
-            }
-            Instruction::JumpWithPcOffset { nnn } => {
-                self.program_counter = self.registers[0x0 as usize] as u16 + nnn;
-            }
-            Instruction::Random { vx, nn } => {
-                self.registers[vx as usize] = rand::Rng::gen_range(&mut rand::thread_rng(), 0..255)
-                    & self.registers[nn as usize]
-            }
+            Instruction::SetIndexRegister { nnn } => self.instruction_set_index_register(nnn),
+            Instruction::JumpWithPcOffset { nnn } => self.instruction_jump_with_pc_offset(nnn),
+            Instruction::Random { vx, nn } => self.instruction_random(vx, nn),
             Instruction::Draw { vx, vy, n } => self.instruction_draw(vx, vy, n),
-            Instruction::SkipIfKeyPressed { vx } => {
-                match self.keypad.current_keycode {
-                    Some(value) => {
-                        if value == self.registers[vx as usize] {
-                            self.program_counter += 1;
-                            //Erase the keypad code after its used for this op
-                            self.keypad.update_keypad(None);
-                        }
-                    }
-                    //Do nothing really if not keypress is detected
-                    None => (),
-                }
+            Instruction::SkipIfKeyPressed { vx } => self.instruction_skip_if_key_pressed(vx),
+            Instruction::SkipIfKeyNotPressed { vx } => self.instruction_skip_if_key_not_pressed(vx),
+            Instruction::SetVxToDelayTimer { vx } => self.instruction_set_vx_to_delay_timer(vx),
+            Instruction::AwaitKeyInput { vx } => self.instruction_await_key_input(vx),
+            Instruction::SetDelayTimer { vx } => self.instruction_set_delay_timer(vx),
+            Instruction::SetSoundTimer { vx } => self.instruction_set_sound_timer(vx),
+            Instruction::AddToIndex { vx } => self.instruction_add_to_index(vx),
+            Instruction::SetIndexToFontCharacter { vx } => {
+                self.instruction_set_index_to_font_character(vx)
             }
-            Instruction::SkipIfKeyNotPressed { vx } => {
-                match self.keypad.current_keycode {
-                    Some(value) => {
-                        if value != self.registers[vx as usize] {
-                            self.program_counter += 1;
-                            //Erase the keypad code after its used for this op
-                            self.keypad.update_keypad(None);
-                        }
-                    }
-                    //Do nothing really if not keypress is detected
-                    None => (),
-                }
+            Instruction::SetIndexToBinaryCodedVx { vx } => {
+                self.instruction_set_index_to_binary_coded_vx(vx)
             }
-            Instruction::SetVxToDelayTimer { vx } => {
-                self.registers[vx as usize] = self.sound_timer.0
-            }
-            Instruction::AwaitKeyInput { vx } => {
-                //Cannot use a loop here because the times still need to be ongoing, this will just halt code execution
-                match self.keypad.current_keycode {
-                    Some(value) => {
-                        self.registers[vx as usize] = value;
-                        //Erase the keypad code after its used for this op
-                        self.keypad.update_keypad(None);
-                    }
-                    //Do continue if not detected
-                    None => self.program_counter -= 1,
-                }
-            }
-            Instruction::SetDelayTimer { vx } => self.delay_timer.0 = self.registers[vx as usize],
-            Instruction::SetSoundTimer { vx } => self.sound_timer.0 = self.registers[vx as usize],
-            Instruction::AddToIndex { vx } => unimplemented!(),
-            Instruction::SetIndexToFontCharacter { vx } => unimplemented!(),
-            Instruction::SetIndexToBinaryCodedVx { vx } => unimplemented!(),
-            Instruction::DumpRegisters { vx } => unimplemented!(),
-            Instruction::LoadRegisters { vx } => unimplemented!(),
-            Instruction::Unknown => unimplemented!(),
+            Instruction::DumpRegisters { vx } => self.instruction_dump_registers(vx),
+            Instruction::LoadRegisters { vx } => self.instruction_load_registers(vx),
+            Instruction::Unknown => self.instruction_unknown(),
         }
 
         Ok(())
