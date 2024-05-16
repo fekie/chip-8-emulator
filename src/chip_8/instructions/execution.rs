@@ -22,19 +22,19 @@ impl Chip8 {
 
     pub fn instruction_skip_if_register_equals(&mut self, vx: u8, nn: u8) {
         if self.registers[vx as usize] == nn {
-            self.program_counter += 1;
+            self.program_counter += 2;
         }
     }
 
     pub fn instruction_skip_if_register_not_equals(&mut self, vx: u8, nn: u8) {
         if self.registers[vx as usize] != nn {
-            self.program_counter += 1;
+            self.program_counter += 2;
         }
     }
 
     pub fn instruction_skip_if_register_vx_equals_vy(&mut self, vx: u8, vy: u8) {
         if self.registers[vx as usize] != self.registers[vy as usize] {
-            self.program_counter += 1;
+            self.program_counter += 2;
         }
     }
 
@@ -177,7 +177,7 @@ impl Chip8 {
         match self.keypad.current_keycode {
             Some(value) => {
                 if value == self.registers[vx as usize] {
-                    self.program_counter += 1;
+                    self.program_counter += 2;
                     //Erase the keypad code after its used for this op
                     self.keypad.update_keypad(None);
                 }
@@ -191,7 +191,7 @@ impl Chip8 {
         match self.keypad.current_keycode {
             Some(value) => {
                 if value != self.registers[vx as usize] {
-                    self.program_counter += 1;
+                    self.program_counter += 2;
                     //Erase the keypad code after its used for this op
                     self.keypad.update_keypad(None);
                 }
@@ -214,7 +214,7 @@ impl Chip8 {
                 self.keypad.update_keypad(None);
             }
             //Do continue if not detected
-            None => self.program_counter -= 1,
+            None => self.program_counter -= 2,
         }
     }
 
