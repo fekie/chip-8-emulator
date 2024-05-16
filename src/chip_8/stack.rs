@@ -8,8 +8,6 @@ use crate::chip_8::{Chip8, Chip8Error};
 pub(crate) const STACK_WINDOW_BOTTOM: u16 = 0x1FE;
 pub(crate) const STACK_WINDOW_TOP: u16 = 0x000;
 
-pub(crate) struct Stack {}
-
 impl Chip8 {
     pub(crate) fn push(&mut self, word: u16) -> Result<(), Chip8Error> {
         if self.stack_pointer == STACK_WINDOW_TOP {

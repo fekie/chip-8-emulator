@@ -1,23 +1,26 @@
 //! A module set aside for containing all of the methods on [`Chip8`] that emulate
 //! the execution of each instruction.
 
-use crate::{Chip8, HEIGHT, WIDTH};
+use crate::{chip_8::Chip8Error, Chip8, HEIGHT, WIDTH};
 
 impl Chip8 {
     pub fn instruction_clear(&mut self) {
         self.screen.clear();
     }
 
-    pub fn instruction_return(&mut self) {
-        unimplemented!()
+    pub fn instruction_return(&mut self) -> Result<(), Chip8Error> {
+        self.program_counter = self.pop()?;
+        Ok(())
     }
 
     pub fn instruction_jump(&mut self, nnn: u16) {
         self.program_counter = nnn;
     }
 
-    pub fn instruction_call(&mut self, nnn: u16) {
-        unimplemented!()
+    pub fn instruction_call(&mut self, nnn: u16) -> Result<(), Chip8Error> {
+        self.push(self.program_counter)?;
+        self.program_counter = nnn;
+        Ok(())
     }
 
     pub fn instruction_skip_if_register_equals(&mut self, vx: u8, nn: u8) {
