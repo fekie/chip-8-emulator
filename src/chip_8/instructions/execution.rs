@@ -272,7 +272,7 @@ impl Chip8 {
 #[cfg(test)]
 mod test_super {
     use crate::chip_8;
-    test_instructions();
+    #[cfg(test)]
     fn test_instructions() {
         let mut chip8 = super::Chip8::new();
         chip8.initialize().unwrap();
