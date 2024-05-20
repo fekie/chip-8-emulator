@@ -97,7 +97,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         if instant.elapsed() > Duration::from_secs(1) {
             instant = Instant::now();
-            dbg!(cycles);
             cycles = 0;
         }
     });
