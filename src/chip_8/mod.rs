@@ -115,6 +115,7 @@ pub struct Chip8 {
     /// See [`SoundTimer`] for more information.
     pub sound_timer: SoundTimer,
     emulator_state: EmulatorState,
+    pub needs_redraw: bool,
 }
 
 impl Chip8 {
@@ -124,6 +125,15 @@ impl Chip8 {
         Self::default()
     }
 
+    pub fn print_all_registers(&self) {
+        for i in 0x0..=0xF {
+            print!("Register {i} is {}\n", self.registers[i as usize]);
+        }
+    }
+
+    pub fn print_current_op(&self) {
+        print!("{}\n", self.memory.word(self.index_register as usize));
+    }
     /// Runs a moves the emulator state by one cycle. Requires both the interpreter memory
     /// to be initialized via [`Self::initialize`] and a program to be loaded in with
     /// [`Self::load_program`].
@@ -157,7 +167,8 @@ impl Chip8 {
 
     /// Executes the provided instruction.
     fn execute(&mut self, instruction: Instruction, keycode: Option<u8>) -> Result<(), Chip8Error> {
-        match instruction {
+        //println!("{:?}", instruction);
+            match instruction {
             Instruction::CallMachineCodeRoutine => {
                 return Err(Chip8Error::UnimplementedInstruction { instruction })
             }

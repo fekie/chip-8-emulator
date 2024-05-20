@@ -105,7 +105,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             // Update internal state and request a redraw
             chip_8.cycle(keycode_opt).unwrap();
-            window.request_redraw();
+            if chip_8.needs_redraw {
+                //window.request_redraw();
+                chip_8.needs_redraw = false;
+            }
+            window.request_redraw()
         }
     });
 }
