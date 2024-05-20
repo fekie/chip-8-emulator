@@ -76,6 +76,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     //spawn a separate thread for the timers, handle used if needed
     let _handle = std::thread::spawn(timer_closure);
 
+
     event_loop.run(move |event, _, control_flow| {
         // Draw the current frame
         if let Event::RedrawRequested(_) = event {
