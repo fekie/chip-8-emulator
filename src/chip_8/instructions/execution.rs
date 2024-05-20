@@ -48,9 +48,7 @@ impl Chip8 {
     pub fn instruction_add_immediate(&mut self, vx: u8, nn: u8) {
         let wrapped_sum = self.registers[vx as usize].wrapping_add(nn);
 
-        let overflow_ocurred = self.registers[vx as usize]
-            .checked_add(nn)
-            .is_none();
+        let overflow_ocurred = self.registers[vx as usize].checked_add(nn).is_none();
 
         self.registers[vx as usize] = wrapped_sum;
         self.registers[0xF] = overflow_ocurred as u8;
@@ -136,6 +134,7 @@ impl Chip8 {
 
     pub fn instruction_draw(&mut self, vx: u8, vy: u8, n: u8) {
         self.needs_redraw = true;
+
         // Initialize VF
         self.registers[0xF] = 0;
 
@@ -186,16 +185,16 @@ impl Chip8 {
         }
     }
 
-    pub fn instruction_skip_if_key_pressed(&mut self, vx: u8, keycode: Option<u8>) {
-        if let Some(keycode) = keycode {
+    pub fn instruction_skip_if_key_pressed(&mut self, vx: u8) {
+        if let Some(keycode) = self.key_pressed {
             if keycode == self.registers[vx as usize] {
                 self.program_counter += 2;
             }
         }
     }
 
-    pub fn instruction_skip_if_key_not_pressed(&mut self, vx: u8, keycode: Option<u8>) {
-        if let Some(keycode) = keycode {
+    pub fn instruction_skip_if_key_not_pressed(&mut self, vx: u8) {
+        if let Some(keycode) = self.key_pressed {
             if keycode != self.registers[vx as usize] {
                 return;
             }
@@ -208,13 +207,13 @@ impl Chip8 {
         self.registers[vx as usize] = self.sound_timer.0
     }
 
-    pub fn instruction_await_key_input(&mut self, vx: u8, keycode: Option<u8>) {
-        if keycode.is_none() {
+    pub fn instruction_await_key_input(&mut self, vx: u8) {
+        if self.key_pressed.is_none() {
             self.program_counter -= 2;
             return;
         }
 
-        self.registers[vx as usize] = keycode.unwrap();
+        self.registers[vx as usize] = self.key_pressed.unwrap();
     }
 
     pub fn instruction_set_delay_timer(&mut self, vx: u8) {
@@ -258,7 +257,6 @@ impl Chip8 {
     }
 
     pub fn instruction_load_registers(&mut self, vx: u8) {
-
         for i in 0x0..=vx {
             self.registers[i as usize] = self.memory.byte({ self.index_register + i as u16} as usize)
         }
@@ -268,6 +266,7 @@ impl Chip8 {
         unimplemented!()
     }
 }
+
 #[cfg(test)]
 mod test_super {
     use crate::chip_8;

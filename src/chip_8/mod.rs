@@ -115,6 +115,9 @@ pub struct Chip8 {
     /// See [`SoundTimer`] for more information.
     pub sound_timer: SoundTimer,
     emulator_state: EmulatorState,
+    /// The current key that is pressed down.
+    pub key_pressed: Option<u8>,
+    /// If this is true, then we need to redraw the frame.
     pub needs_redraw: bool,
 }
 
@@ -137,14 +140,14 @@ impl Chip8 {
     /// Runs a moves the emulator state by one cycle. Requires both the interpreter memory
     /// to be initialized via [`Self::initialize`] and a program to be loaded in with
     /// [`Self::load_program`].
-    pub fn cycle(&mut self, keycode: Option<u8>) -> Result<(), Chip8Error> {
+    pub fn cycle(&mut self) -> Result<(), Chip8Error> {
         if self.emulator_state != EmulatorState::ProgramLoaded {
             return Err(Chip8Error::ProgramNotLoaded);
         }
 
         let raw = self.fetch();
         let instruction = self.decode(raw)?;
-        self.execute(instruction, keycode)?;
+        self.execute(instruction)?;
 
         Ok(())
     }
@@ -166,9 +169,9 @@ impl Chip8 {
     }
 
     /// Executes the provided instruction.
-    fn execute(&mut self, instruction: Instruction, keycode: Option<u8>) -> Result<(), Chip8Error> {
-        //println!("{:?}", instruction);
-            match instruction {
+
+    fn execute(&mut self, instruction: Instruction) -> Result<(), Chip8Error> {
+        match instruction {
             Instruction::CallMachineCodeRoutine => {
                 return Err(Chip8Error::UnimplementedInstruction { instruction })
             }
@@ -205,14 +208,10 @@ impl Chip8 {
             Instruction::JumpWithPcOffset { nnn } => self.instruction_jump_with_pc_offset(nnn),
             Instruction::Random { vx, nn } => self.instruction_random(vx, nn),
             Instruction::Draw { vx, vy, n } => self.instruction_draw(vx, vy, n),
-            Instruction::SkipIfKeyPressed { vx } => {
-                self.instruction_skip_if_key_pressed(vx, keycode)
-            }
-            Instruction::SkipIfKeyNotPressed { vx } => {
-                self.instruction_skip_if_key_not_pressed(vx, keycode)
-            }
+            Instruction::SkipIfKeyPressed { vx } => self.instruction_skip_if_key_pressed(vx),
+            Instruction::SkipIfKeyNotPressed { vx } => self.instruction_skip_if_key_not_pressed(vx),
             Instruction::SetVxToDelayTimer { vx } => self.instruction_set_vx_to_delay_timer(vx),
-            Instruction::AwaitKeyInput { vx } => self.instruction_await_key_input(vx, keycode),
+            Instruction::AwaitKeyInput { vx } => self.instruction_await_key_input(vx),
             Instruction::SetDelayTimer { vx } => self.instruction_set_delay_timer(vx),
             Instruction::SetSoundTimer { vx } => self.instruction_set_sound_timer(vx),
             Instruction::AddToIndex { vx } => self.instruction_add_to_index(vx),
