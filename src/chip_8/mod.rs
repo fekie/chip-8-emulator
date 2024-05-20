@@ -54,12 +54,6 @@ pub struct DelayTimer(pub u8);
 #[derive(Debug, Default, Copy, Clone)]
 pub struct SoundTimer(pub u8);
 
-/// Stores the state of the hex keypad, which goes from 0x0 to 0xF.
-#[derive(Debug, Default)]
-struct Keypad {
-    current_keycode: Option<u8>,
-}
-
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 enum EmulatorState {
     #[default]
@@ -120,8 +114,6 @@ pub struct Chip8 {
     pub delay_timer: DelayTimer,
     /// See [`SoundTimer`] for more information.
     pub sound_timer: SoundTimer,
-    /// See [`Keypad`] for more information.
-    keypad: Keypad,
     emulator_state: EmulatorState,
 }
 
@@ -135,14 +127,14 @@ impl Chip8 {
     /// Runs a moves the emulator state by one cycle. Requires both the interpreter memory
     /// to be initialized via [`Self::initialize`] and a program to be loaded in with
     /// [`Self::load_program`].
-    pub fn cycle(&mut self) -> Result<(), Chip8Error> {
+    pub fn cycle(&mut self, keycode: Option<u8>) -> Result<(), Chip8Error> {
         if self.emulator_state != EmulatorState::ProgramLoaded {
             return Err(Chip8Error::ProgramNotLoaded);
         }
 
         let raw = self.fetch();
         let instruction = self.decode(raw)?;
-        self.execute(instruction)?;
+        self.execute(instruction, keycode)?;
 
         Ok(())
     }
@@ -164,15 +156,15 @@ impl Chip8 {
     }
 
     /// Executes the provided instruction.
-    fn execute(&mut self, instruction: Instruction) -> Result<(), Chip8Error> {
+    fn execute(&mut self, instruction: Instruction, keycode: Option<u8>) -> Result<(), Chip8Error> {
         match instruction {
             Instruction::CallMachineCodeRoutine => {
                 return Err(Chip8Error::UnimplementedInstruction { instruction })
             }
             Instruction::Clear => self.instruction_clear(),
-            Instruction::Return => self.instruction_return(),
+            Instruction::Return => self.instruction_return()?,
             Instruction::Jump { nnn } => self.instruction_jump(nnn),
-            Instruction::Call { nnn } => self.instruction_call(nnn),
+            Instruction::Call { nnn } => self.instruction_call(nnn)?,
             Instruction::SkipIfRegisterEquals { vx, nn } => {
                 self.instruction_skip_if_register_equals(vx, nn)
             }
@@ -202,10 +194,14 @@ impl Chip8 {
             Instruction::JumpWithPcOffset { nnn } => self.instruction_jump_with_pc_offset(nnn),
             Instruction::Random { vx, nn } => self.instruction_random(vx, nn),
             Instruction::Draw { vx, vy, n } => self.instruction_draw(vx, vy, n),
-            Instruction::SkipIfKeyPressed { vx } => self.instruction_skip_if_key_pressed(vx),
-            Instruction::SkipIfKeyNotPressed { vx } => self.instruction_skip_if_key_not_pressed(vx),
+            Instruction::SkipIfKeyPressed { vx } => {
+                self.instruction_skip_if_key_pressed(vx, keycode)
+            }
+            Instruction::SkipIfKeyNotPressed { vx } => {
+                self.instruction_skip_if_key_not_pressed(vx, keycode)
+            }
             Instruction::SetVxToDelayTimer { vx } => self.instruction_set_vx_to_delay_timer(vx),
-            Instruction::AwaitKeyInput { vx } => self.instruction_await_key_input(vx),
+            Instruction::AwaitKeyInput { vx } => self.instruction_await_key_input(vx, keycode),
             Instruction::SetDelayTimer { vx } => self.instruction_set_delay_timer(vx),
             Instruction::SetSoundTimer { vx } => self.instruction_set_sound_timer(vx),
             Instruction::AddToIndex { vx } => self.instruction_add_to_index(vx),
@@ -236,10 +232,5 @@ impl DelayTimer {
         if self.0 > 0 {
             self.0 -= 1;
         }
-    }
-}
-impl Keypad {
-    fn update_keypad(&mut self, keyvalue: Option<u8>) {
-        self.current_keycode = keyvalue;
     }
 }

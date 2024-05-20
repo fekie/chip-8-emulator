@@ -111,7 +111,9 @@ impl Chip8 {
     }
 
     pub fn instruction_skip_if_register_vx_not_equals_vy(&mut self, vx: u8, vy: u8) {
-        unimplemented!()
+        if self.registers[vx as usize] != self.registers[vy as usize] {
+            self.program_counter += 2;
+        }
     }
 
     pub fn instruction_set_index_register(&mut self, nnn: u16) {
@@ -176,49 +178,35 @@ impl Chip8 {
         }
     }
 
-    pub fn instruction_skip_if_key_pressed(&mut self, vx: u8) {
-        match self.keypad.current_keycode {
-            Some(value) => {
-                if value == self.registers[vx as usize] {
-                    self.program_counter += 2;
-                    //Erase the keypad code after its used for this op
-                    self.keypad.update_keypad(None);
-                }
+    pub fn instruction_skip_if_key_pressed(&mut self, vx: u8, keycode: Option<u8>) {
+        if let Some(keycode) = keycode {
+            if keycode == self.registers[vx as usize] {
+                self.program_counter += 2;
             }
-            //Do nothing really if not keypress is detected
-            None => (),
         }
     }
 
-    pub fn instruction_skip_if_key_not_pressed(&mut self, vx: u8) {
-        match self.keypad.current_keycode {
-            Some(value) => {
-                if value != self.registers[vx as usize] {
-                    self.program_counter += 2;
-                    //Erase the keypad code after its used for this op
-                    self.keypad.update_keypad(None);
-                }
+    pub fn instruction_skip_if_key_not_pressed(&mut self, vx: u8, keycode: Option<u8>) {
+        if let Some(keycode) = keycode {
+            if keycode != self.registers[vx as usize] {
+                return;
             }
-            //Do nothing really if not keypress is detected
-            None => (),
         }
+
+        self.program_counter += 2;
     }
 
     pub fn instruction_set_vx_to_delay_timer(&mut self, vx: u8) {
         self.registers[vx as usize] = self.sound_timer.0
     }
 
-    pub fn instruction_await_key_input(&mut self, vx: u8) {
-        //Cannot use a loop here because the times still need to be ongoing, this will just halt code execution
-        match self.keypad.current_keycode {
-            Some(value) => {
-                self.registers[vx as usize] = value;
-                //Erase the keypad code after its used for this op
-                self.keypad.update_keypad(None);
-            }
-            //Do continue if not detected
-            None => self.program_counter -= 2,
+    pub fn instruction_await_key_input(&mut self, vx: u8, keycode: Option<u8>) {
+        if keycode.is_none() {
+            self.program_counter -= 2;
+            return;
         }
+
+        self.registers[vx as usize] = keycode.unwrap();
     }
 
     pub fn instruction_set_delay_timer(&mut self, vx: u8) {
@@ -239,20 +227,31 @@ impl Chip8 {
     }
 
     pub fn instruction_set_index_to_binary_coded_vx(&mut self, vx: u8) {
-        self.memory.set_byte({self.index_register} as usize, self.registers[vx as usize] / 100);
-        self.memory.set_byte({self.index_register + 1} as usize, {self.registers[vx as usize] / 10} % 10);
-        self.memory.set_byte({self.index_register + 2} as usize, {self.registers[vx as usize] % 10});
+        self.memory.set_byte(
+            { self.index_register } as usize,
+            self.registers[vx as usize] / 100,
+        );
+        self.memory.set_byte(
+            { self.index_register + 1 } as usize,
+            { self.registers[vx as usize] / 10 } % 10,
+        );
+        self.memory.set_byte({ self.index_register + 2 } as usize, {
+            self.registers[vx as usize] % 10
+        });
     }
 
     pub fn instruction_dump_registers(&mut self, vx: u8) {
-        for i in 0x0..0xF {
-            self.memory.set_byte({self.index_register + i} as usize, self.registers[i as usize]);
+        for i in 0x0..=0xF {
+            self.memory.set_byte(
+                { self.index_register + i } as usize,
+                self.registers[i as usize],
+            );
         }
     }
 
     pub fn instruction_load_registers(&mut self, vx: u8) {
-        for i in 0x0..0xF {
-            self.registers[i as usize] = self.memory.byte({self.index_register + i} as usize)
+        for i in 0x0..=0xF {
+            self.registers[i as usize] = self.memory.byte({ self.index_register + i } as usize)
         }
     }
 

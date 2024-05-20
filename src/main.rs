@@ -5,10 +5,9 @@ use env_logger::Env;
 use log::error;
 use pixels::{Pixels, SurfaceTexture};
 use std::io::Write;
-use std::time::Instant;
 use winit::{
     dpi::LogicalSize,
-    event::{Event, VirtualKeyCode},
+    event::Event,
     event_loop::{ControlFlow, EventLoop},
     window::WindowBuilder,
 };
@@ -77,7 +76,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     //spawn a separate thread for the timers, handle used if needed
     let _handle = std::thread::spawn(timer_closure);
 
-    event_loop.run(move |event, _, mut control_flow| {
+    event_loop.run(move |event, _, control_flow| {
         // Draw the current frame
         if let Event::RedrawRequested(_) = event {
             chip_8.draw(pixels.frame_mut());
@@ -92,7 +91,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Handle input events
         if input.update(&event) {
             // keyboard events
-            crate::chip_8::keypad::handle_keyboard_input(&input, &mut control_flow);
+            let keycode_opt = crate::chip_8::keypad::handle_keyboard_input(&input, control_flow);
 
             // Resize the window
             if let Some(size) = input.window_resized() {
@@ -104,7 +103,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
 
             // Update internal state and request a redraw
-            chip_8.cycle().unwrap();
+            chip_8.cycle(keycode_opt).unwrap();
             window.request_redraw();
         }
     });
