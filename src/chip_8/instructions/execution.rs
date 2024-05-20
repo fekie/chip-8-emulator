@@ -36,7 +36,7 @@ impl Chip8 {
     }
 
     pub fn instruction_skip_if_register_vx_equals_vy(&mut self, vx: u8, vy: u8) {
-        if self.registers[vx as usize] != self.registers[vy as usize] {
+        if self.registers[vx as usize] == self.registers[vy as usize] {
             self.program_counter += 2;
         }
     }
@@ -46,7 +46,14 @@ impl Chip8 {
     }
 
     pub fn instruction_add_immediate(&mut self, vx: u8, nn: u8) {
-        self.registers[vx as usize] += nn;
+        let wrapped_sum = self.registers[vx as usize].wrapping_add(nn);
+
+        let overflow_ocurred = self.registers[vx as usize]
+            .checked_add(nn)
+            .is_none();
+
+        self.registers[vx as usize] = wrapped_sum;
+        self.registers[0xF] = overflow_ocurred as u8;
     }
 
     pub fn instruction_copy(&mut self, vx: u8, vy: u8) {
@@ -111,7 +118,9 @@ impl Chip8 {
     }
 
     pub fn instruction_skip_if_register_vx_not_equals_vy(&mut self, vx: u8, vy: u8) {
-        unimplemented!()
+        if self.registers[vx as usize] != self.registers[vx as usize] {
+            self.program_counter += 2;
+        }
     }
 
     pub fn instruction_set_index_register(&mut self, nnn: u16) {
@@ -251,12 +260,24 @@ impl Chip8 {
     }
 
     pub fn instruction_load_registers(&mut self, vx: u8) {
-        for i in 0x0..0xF {
+        for i in 0x0..=0xF {
             self.registers[i as usize] = self.memory.byte({self.index_register + i} as usize)
         }
     }
 
     pub fn instruction_unknown(&mut self) {
         unimplemented!()
+    }
+}
+#[cfg(test)]
+mod test_super {
+    use crate::chip_8;
+    test_instructions();
+    fn test_instructions() {
+        let mut chip8 = super::Chip8::new();
+        chip8.initialize().unwrap();
+        chip8.load_program(include_bytes!("/home/adi/code/chip-8-emulator/roms/test_opcode.ch8").to_vec()).unwrap();
+        chip8.cycle().unwrap();
+        println!("{}",chip8.fetch())
     }
 }

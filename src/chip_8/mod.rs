@@ -170,9 +170,9 @@ impl Chip8 {
                 return Err(Chip8Error::UnimplementedInstruction { instruction })
             }
             Instruction::Clear => self.instruction_clear(),
-            Instruction::Return => self.instruction_return(),
+            Instruction::Return => self.instruction_return()?,
             Instruction::Jump { nnn } => self.instruction_jump(nnn),
-            Instruction::Call { nnn } => self.instruction_call(nnn),
+            Instruction::Call { nnn } => self.instruction_call(nnn)?,
             Instruction::SkipIfRegisterEquals { vx, nn } => {
                 self.instruction_skip_if_register_equals(vx, nn)
             }

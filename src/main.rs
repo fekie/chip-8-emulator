@@ -78,6 +78,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let _handle = std::thread::spawn(timer_closure);
 
     event_loop.run(move |event, _, mut control_flow| {
+        //std::thread::sleep(std::time::Duration::from_millis(5));
         // Draw the current frame
         if let Event::RedrawRequested(_) = event {
             chip_8.draw(pixels.frame_mut());
