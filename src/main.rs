@@ -129,6 +129,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
 
+
             // If we need to redraw at this time, then redraw
             if chip_8.lock().unwrap().needs_redraw {
                 window.request_redraw();

@@ -129,7 +129,7 @@ impl Chip8 {
     }
     pub fn instruction_random(&mut self, vx: u8, nn: u8) {
         self.registers[vx as usize] =
-            rand::Rng::gen_range(&mut rand::thread_rng(), 0..255) & self.registers[nn as usize]
+            rand::Rng::gen_range(&mut rand::thread_rng(), 0..=255) & nn
     }
 
     pub fn instruction_draw(&mut self, vx: u8, vy: u8, n: u8) {
@@ -248,21 +248,34 @@ impl Chip8 {
     }
 
     pub fn instruction_dump_registers(&mut self, vx: u8) {
-        for i in 0x0..=vx as u16 {
+        for i in 0x0..=vx {
             self.memory.set_byte(
-                { self.index_register + i } as usize,
+                { self.index_register + i as u16} as usize,
                 self.registers[i as usize],
             );
         }
     }
 
     pub fn instruction_load_registers(&mut self, vx: u8) {
-        for i in 0x0..=vx as u16 {
-            self.registers[i as usize] = self.memory.byte({ self.index_register + i } as usize)
+        for i in 0x0..=vx {
+            self.registers[i as usize] = self.memory.byte({ self.index_register + i as u16} as usize)
         }
     }
 
     pub fn instruction_unknown(&mut self) {
         unimplemented!()
+    }
+}
+
+#[cfg(test)]
+mod test_super {
+    use crate::chip_8;
+    #[cfg(test)]
+    fn test_instructions() {
+        let mut chip8 = super::Chip8::new();
+        chip8.initialize().unwrap();
+        chip8.load_program(vec![0xe000, 0x2aa2]).unwrap();
+        chip8.cycle(None).unwrap();
+        println!("{}",chip8.fetch())
     }
 }
