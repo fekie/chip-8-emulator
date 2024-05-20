@@ -48,9 +48,7 @@ impl Chip8 {
     pub fn instruction_add_immediate(&mut self, vx: u8, nn: u8) {
         let wrapped_sum = self.registers[vx as usize].wrapping_add(nn);
 
-        let overflow_ocurred = self.registers[vx as usize]
-            .checked_add(nn)
-            .is_none();
+        let overflow_ocurred = self.registers[vx as usize].checked_add(nn).is_none();
 
         self.registers[vx as usize] = wrapped_sum;
         self.registers[0xF] = overflow_ocurred as u8;
@@ -135,6 +133,8 @@ impl Chip8 {
     }
 
     pub fn instruction_draw(&mut self, vx: u8, vy: u8, n: u8) {
+        self.needs_redraw = true;
+
         // Initialize VF
         self.registers[0xF] = 0;
 
@@ -273,8 +273,12 @@ mod test_super {
     fn test_instructions() {
         let mut chip8 = super::Chip8::new();
         chip8.initialize().unwrap();
-        chip8.load_program(include_bytes!("/home/adi/code/chip-8-emulator/roms/test_opcode.ch8").to_vec()).unwrap();
+        chip8
+            .load_program(
+                include_bytes!("/home/adi/code/chip-8-emulator/roms/test_opcode.ch8").to_vec(),
+            )
+            .unwrap();
         chip8.cycle().unwrap();
-        println!("{}",chip8.fetch())
+        println!("{}", chip8.fetch())
     }
 }

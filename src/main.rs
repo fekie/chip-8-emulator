@@ -5,6 +5,7 @@ use env_logger::Env;
 use log::error;
 use pixels::{Pixels, SurfaceTexture};
 use std::io::Write;
+use std::time::{Duration, Instant};
 use winit::{
     dpi::LogicalSize,
     event::Event,
@@ -17,7 +18,9 @@ mod chip_8;
 
 // We scale everything up by a factor of 8
 const SCALE: u32 = 8;
-const HZ: u32 = 60;
+const HZ: u32 = 30;
+const CYCLES_PER_SECOND: u32 = 720;
+const CYCLES_PER_FRAME: u32 = CYCLES_PER_SECOND / HZ;
 #[derive(clap::Parser, Debug)]
 struct Args {
     /// Path to the ROM that will be loaded.
@@ -76,6 +79,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     //spawn a separate thread for the timers, handle used if needed
     let _handle = std::thread::spawn(timer_closure);
 
+    let mut frames = 0;
+
+    //
+    let mut last_frame = Instant::now();
 
     event_loop.run(move |event, _, control_flow| {
         // Draw the current frame
@@ -103,9 +110,29 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
 
-            // Update internal state and request a redraw
-            chip_8.cycle(keycode_opt).unwrap();
-            window.request_redraw();
+            frames += 1;
+
+            let foo = Instant::now();
+            // Do CYCLES_PER_FRAME to keep it at CYCLES_PER_SECOND
+            // This should last roughly 2 seconds.
+            // We do this loop 30 times a second.
+            for _ in 0..CYCLES_PER_FRAME {
+                chip_8.cycle(keycode_opt).unwrap();
+                //dbg!(Duration::from_secs_f64(2_f64 / CYCLES_PER_FRAME as f64));
+                std::thread::sleep(Duration::from_secs_f64(2_f64 / CYCLES_PER_FRAME as f64))
+            }
+
+            // If we need to redraw at this time, then redraw
+            if chip_8.needs_redraw {
+                window.request_redraw();
+                chip_8.needs_redraw = false;
+            }
+
+            if last_frame.elapsed() > Duration::from_secs(1) {
+                last_frame = Instant::now();
+                dbg!(frames);
+                frames = 0;
+            }
         }
     });
 }

@@ -115,6 +115,7 @@ pub struct Chip8 {
     /// See [`SoundTimer`] for more information.
     pub sound_timer: SoundTimer,
     emulator_state: EmulatorState,
+    pub needs_redraw: bool,
 }
 
 impl Chip8 {

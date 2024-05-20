@@ -95,6 +95,7 @@ impl Chip8 {
     /// You can now load a program with [`Self::load_program`].
     pub fn initialize(&mut self) -> Result<(), Chip8Error> {
         self.program_counter = PROGRAM_OFFSET as u16;
+        self.needs_redraw = true;
 
         // Set the stack pointer to the value just under the stack, so that the
         // next push starts at bottom of the stack window.
