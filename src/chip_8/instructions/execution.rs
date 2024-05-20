@@ -230,23 +230,30 @@ impl Chip8 {
     }
 
     pub fn instruction_add_to_index(&mut self, vx: u8) {
-        unimplemented!()
+        //Says to ignore overflow and not set the VF register
+        self.index_register += self.registers[vx as usize] as u16
     }
 
     pub fn instruction_set_index_to_font_character(&mut self, vx: u8) {
-        unimplemented!()
+        self.index_register = self.registers[vx as usize] as u16
     }
 
     pub fn instruction_set_index_to_binary_coded_vx(&mut self, vx: u8) {
-        unimplemented!()
+        self.memory.set_byte({self.index_register} as usize, self.registers[vx as usize] / 100);
+        self.memory.set_byte({self.index_register + 1} as usize, {self.registers[vx as usize] / 10} % 10);
+        self.memory.set_byte({self.index_register + 2} as usize, {self.registers[vx as usize] % 10});
     }
 
     pub fn instruction_dump_registers(&mut self, vx: u8) {
-        unimplemented!()
+        for i in 0x0..0xF {
+            self.memory.set_byte({self.index_register + i} as usize, self.registers[i as usize]);
+        }
     }
 
     pub fn instruction_load_registers(&mut self, vx: u8) {
-        unimplemented!()
+        for i in 0x0..0xF {
+            self.registers[i as usize] = self.memory.byte({self.index_register + i} as usize)
+        }
     }
 
     pub fn instruction_unknown(&mut self) {
