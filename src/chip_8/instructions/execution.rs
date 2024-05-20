@@ -185,16 +185,16 @@ impl Chip8 {
         }
     }
 
-    pub fn instruction_skip_if_key_pressed(&mut self, vx: u8, keycode: Option<u8>) {
-        if let Some(keycode) = keycode {
+    pub fn instruction_skip_if_key_pressed(&mut self, vx: u8) {
+        if let Some(keycode) = self.key_pressed {
             if keycode == self.registers[vx as usize] {
                 self.program_counter += 2;
             }
         }
     }
 
-    pub fn instruction_skip_if_key_not_pressed(&mut self, vx: u8, keycode: Option<u8>) {
-        if let Some(keycode) = keycode {
+    pub fn instruction_skip_if_key_not_pressed(&mut self, vx: u8) {
+        if let Some(keycode) = self.key_pressed {
             if keycode != self.registers[vx as usize] {
                 return;
             }
@@ -207,13 +207,13 @@ impl Chip8 {
         self.registers[vx as usize] = self.sound_timer.0
     }
 
-    pub fn instruction_await_key_input(&mut self, vx: u8, keycode: Option<u8>) {
-        if keycode.is_none() {
+    pub fn instruction_await_key_input(&mut self, vx: u8) {
+        if self.key_pressed.is_none() {
             self.program_counter -= 2;
             return;
         }
 
-        self.registers[vx as usize] = keycode.unwrap();
+        self.registers[vx as usize] = self.key_pressed.unwrap();
     }
 
     pub fn instruction_set_delay_timer(&mut self, vx: u8) {
@@ -248,7 +248,7 @@ impl Chip8 {
     }
 
     pub fn instruction_dump_registers(&mut self, vx: u8) {
-        for i in 0x0..=0xF {
+        for i in 0x0..=vx as u16 {
             self.memory.set_byte(
                 { self.index_register + i } as usize,
                 self.registers[i as usize],
@@ -257,28 +257,12 @@ impl Chip8 {
     }
 
     pub fn instruction_load_registers(&mut self, vx: u8) {
-        for i in 0x0..=0xF {
+        for i in 0x0..=vx as u16 {
             self.registers[i as usize] = self.memory.byte({ self.index_register + i } as usize)
         }
     }
 
     pub fn instruction_unknown(&mut self) {
         unimplemented!()
-    }
-}
-#[cfg(test)]
-mod test_super {
-    use crate::chip_8;
-    #[cfg(test)]
-    fn test_instructions() {
-        let mut chip8 = super::Chip8::new();
-        chip8.initialize().unwrap();
-        chip8
-            .load_program(
-                include_bytes!("/home/adi/code/chip-8-emulator/roms/test_opcode.ch8").to_vec(),
-            )
-            .unwrap();
-        chip8.cycle().unwrap();
-        println!("{}", chip8.fetch())
     }
 }
