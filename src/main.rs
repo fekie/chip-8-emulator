@@ -1,4 +1,4 @@
-use chip_8::Chip8;
+use chip_8::{Chip8, Chip8Error};
 use chip_8::{HEIGHT, WIDTH};
 use clap::Parser;
 use env_logger::Env;
@@ -44,6 +44,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // I'm sorry I put this in a mutex, I need to multithread and the Chip8 doesn't
     // care about the performance loss.
     let mut chip_8 = Arc::new(Mutex::new(Chip8::new()));
+
     chip_8.lock().unwrap().initialize()?;
 
     let program_bytes = std::fs::read(args.rom)?;
@@ -85,10 +86,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     //spawn a separate thread for the timers, handle used if needed
     //let _handle = std::thread::spawn(timer_closure);
 
-    let mut cycles = 0;
     let mut instant = Instant::now();
     let chip_8_handle_1 = Arc::clone(&chip_8);
     let _foo = std::thread::spawn(move || loop {
+        dbg!("aaaaa");
+
+        if chip_8_handle_1.lock().unwrap().needs_program_restart {
+            chip_8_handle_1.lock().unwrap().initialize().unwrap();
+            chip_8_handle_1
+                .lock()
+                .unwrap()
+                .load_program(program_bytes.clone())
+                .unwrap();
+        }
+
+        let mut cycles = 0;
+
         for _ in 0..CYCLES_PER_SECOND {
             chip_8_handle_1.lock().unwrap().cycle().unwrap();
             std::thread::sleep(Duration::from_secs_f64(1_f64 / CYCLES_PER_SECOND as f64));
@@ -123,7 +136,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             // keyboard events
             let keycode_opt = crate::chip_8::keypad::handle_keyboard_input(&input, control_flow);
 
-            chip_8.lock().unwrap().key_pressed = keycode_opt;
+            //dbg!(keycode_opt);
+
+            chip_8.lock().unwrap().key_pressed = match keycode_opt {
+                Ok(x) => x,
+                Err(e) => match e {
+                    Chip8Error::ProgramRestartRequested => {
+                        chip_8.lock().unwrap().needs_program_restart = true;
+                        None
+                    }
+                    _ => panic!("{}", e),
+                },
+            };
 
             // Resize the window
             if let Some(size) = input.window_resized() {
@@ -133,7 +157,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     return;
                 }
             }
-
 
             // If we need to redraw at this time, then redraw
             if chip_8.lock().unwrap().needs_redraw {
