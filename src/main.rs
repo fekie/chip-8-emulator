@@ -89,8 +89,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut instant = Instant::now();
     let chip_8_handle_1 = Arc::clone(&chip_8);
     let _foo = std::thread::spawn(move || loop {
-        dbg!("aaaaa");
-
+        // Check for if we need to restart the program.
         if chip_8_handle_1.lock().unwrap().needs_program_restart {
             chip_8_handle_1.lock().unwrap().initialize().unwrap();
             chip_8_handle_1
@@ -108,7 +107,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             if (cycles % 12) == 0 {
                 chip_8_handle_1.lock().unwrap().delay_timer.decrement();
                 chip_8_handle_1.lock().unwrap().sound_timer.decrement();
-            }              
+            }
             cycles += 1;
         }
 
@@ -116,7 +115,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             instant = Instant::now();
             cycles = 0;
         }
-
     });
 
     event_loop.run(move |event, _, control_flow| {
