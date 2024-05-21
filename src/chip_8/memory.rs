@@ -94,6 +94,7 @@ impl Chip8 {
     /// Initializes the emulator's system memory and loads fonts into memory.
     /// You can now load a program with [`Self::load_program`].
     pub fn initialize(&mut self) -> Result<(), Chip8Error> {
+        self.registers = [0; 16];
         self.program_counter = PROGRAM_OFFSET as u16;
         self.needs_redraw = true;
 
@@ -102,6 +103,11 @@ impl Chip8 {
         self.stack_pointer = stack::STACK_WINDOW_BOTTOM + 1;
 
         self.memory.load_font_set()?;
+
+        // Clear program memory
+        for address in PROGRAM_OFFSET..=0xFFF {
+            self.memory.set_byte(address, 0);
+        }
 
         self.emulator_state
             .change_states(EmulatorState::InterpreterMemoryInitialized)?;

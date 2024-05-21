@@ -30,6 +30,8 @@ pub enum Chip8Error {
     StackOverflow,
     #[error("Stack underflow")]
     StackUnderflow,
+    #[error("Program Restart Requested")]
+    ProgramRestartRequested,
     /// Triggered when the emulator encounters instruction 0NNN.
     /// This would normally pause the chip-8 interpreter and run
     /// hardware-dependant code, and is not used for the majority of roms.
@@ -64,26 +66,9 @@ enum EmulatorState {
 
 impl EmulatorState {
     fn change_states(&mut self, new_state: EmulatorState) -> Result<(), Chip8Error> {
-        match new_state {
-            // If it's moving to the initialized state, we just want to panic
-            // because the user has definitely used some code that needs to be looked at.
-            Self::InterpreterMemoryUninitialized => {
-                panic!("Cannot uninitialize uninitialized memory.")
-            }
-            Self::InterpreterMemoryInitialized => match self {
-                Self::InterpreterMemoryInitialized => {
-                    return Err(Chip8Error::InterpreterMemoryAlreadyInitialized)
-                }
-                Self::ProgramLoaded => return Err(Chip8Error::InterpreterMemoryAlreadyInitialized),
-                _ => {}
-            },
-
-            Self::ProgramLoaded => {
-                if let Self::InterpreterMemoryUninitialized = self {
-                    return Err(Chip8Error::InterpreterMemoryIsUninitialized);
-                }
-            }
-        };
+        if new_state == Self::InterpreterMemoryUninitialized {
+            unreachable!("Cannot uninitialize uninitialized memory.")
+        }
 
         // If we don't meet any invalid states, move to the next state.
         *self = new_state;
@@ -119,6 +104,7 @@ pub struct Chip8 {
     pub key_pressed: Option<u8>,
     /// If this is true, then we need to redraw the frame.
     pub needs_redraw: bool,
+    pub needs_program_restart: bool,
 }
 
 impl Chip8 {
