@@ -24,6 +24,7 @@ const SCALE: u32 = 8;
 const HZ: u32 = 30;
 const CYCLES_PER_SECOND: u32 = 720;
 const CYCLES_PER_FRAME: u32 = CYCLES_PER_SECOND / HZ;
+const CYCLES_PER_CLOCK: u32 = CYCLES_PER_SECOND / 60;
 #[derive(clap::Parser, Debug)]
 struct Args {
     /// Path to the ROM that will be loaded.
@@ -104,7 +105,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         for _ in 0..CYCLES_PER_SECOND {
             chip_8_handle_1.lock().unwrap().cycle().unwrap();
             std::thread::sleep(Duration::from_secs_f64(1_f64 / CYCLES_PER_SECOND as f64));
-
+            if (cycles % 12) == 0 {
+                chip_8_handle_1.lock().unwrap().delay_timer.decrement();
+                chip_8_handle_1.lock().unwrap().sound_timer.decrement();
+            }              
             cycles += 1;
         }
 
@@ -112,6 +116,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             instant = Instant::now();
             cycles = 0;
         }
+
     });
 
     event_loop.run(move |event, _, control_flow| {
