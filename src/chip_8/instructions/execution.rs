@@ -1,6 +1,8 @@
 //! A module set aside for containing all of the methods on [`Chip8`] that emulate
 //! the execution of each instruction.
 
+use log::error;
+
 use crate::{chip_8::Chip8Error, Chip8, HEIGHT, WIDTH};
 
 impl Chip8 {
@@ -128,13 +130,10 @@ impl Chip8 {
         self.program_counter = self.registers[0x0 as usize] as u16 + nnn;
     }
     pub fn instruction_random(&mut self, vx: u8, nn: u8) {
-        self.registers[vx as usize] =
-            rand::Rng::gen_range(&mut rand::thread_rng(), 0..=255) & nn
+        self.registers[vx as usize] = rand::Rng::gen_range(&mut rand::thread_rng(), 0..=255) & nn
     }
 
     pub fn instruction_draw(&mut self, vx: u8, vy: u8, n: u8) {
-        self.needs_redraw = true;
-
         // Initialize VF
         self.registers[0xF] = 0;
 
@@ -182,6 +181,12 @@ impl Chip8 {
             if y == HEIGHT as u8 {
                 break;
             }
+        }
+        if let Some(frame_handle) = &self.frame_handle {
+            frame_handle
+                .send(Box::new(self.screen.get().clone()))
+                .inspect_err(|e| error!("Error sending frame {e}"))
+                .unwrap();
         }
     }
 
@@ -250,7 +255,7 @@ impl Chip8 {
     pub fn instruction_dump_registers(&mut self, vx: u8) {
         for i in 0x0..=vx {
             self.memory.set_byte(
-                { self.index_register + i as u16} as usize,
+                { self.index_register + i as u16 } as usize,
                 self.registers[i as usize],
             );
         }
@@ -258,7 +263,9 @@ impl Chip8 {
 
     pub fn instruction_load_registers(&mut self, vx: u8) {
         for i in 0x0..=vx {
-            self.registers[i as usize] = self.memory.byte({ self.index_register + i as u16} as usize)
+            self.registers[i as usize] = self
+                .memory
+                .byte({ self.index_register + i as u16 } as usize)
         }
     }
 
@@ -268,14 +275,4 @@ impl Chip8 {
 }
 
 #[cfg(test)]
-mod test_super {
-    use crate::chip_8;
-    #[cfg(test)]
-    fn test_instructions() {
-        let mut chip8 = super::Chip8::new();
-        chip8.initialize().unwrap();
-        chip8.load_program(vec![0xe000, 0x2aa2]).unwrap();
-        chip8.cycle(None).unwrap();
-        println!("{}",chip8.fetch())
-    }
-}
+mod test_super {}

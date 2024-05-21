@@ -2,6 +2,8 @@
 
 #![warn(missing_docs, missing_debug_implementations)]
 
+use std::sync::mpsc::{Receiver, Sender, TryRecvError};
+
 use self::{instructions::Instruction, screen::Screen, sound::play_buzzer};
 use instructions::execution;
 use memory::Memory;
@@ -105,13 +107,22 @@ pub struct Chip8 {
     /// If this is true, then we need to redraw the frame.
     pub needs_redraw: bool,
     pub needs_program_restart: bool,
+    frame_handle: Option<Sender<Box<[u8]>>>,
+    input_handle: Option<Receiver<Result<Option<u8>, Chip8Error>>>,
 }
 
 impl Chip8 {
     /// Creates a new emulator with empty memory. You still have to initialize
     /// to with [`Self::initialize`] to load programs.
-    pub fn new() -> Self {
-        Self::default()
+    pub fn new(
+        frame_handle: Sender<Box<[u8]>>,
+        input_handle: Receiver<Result<Option<u8>, Chip8Error>>,
+    ) -> Self {
+        Self {
+            frame_handle: Some(frame_handle),
+            input_handle: Some(input_handle),
+            ..Default::default()
+        }
     }
 
     pub fn print_all_registers(&self) {
@@ -130,6 +141,21 @@ impl Chip8 {
         if self.emulator_state != EmulatorState::ProgramLoaded {
             return Err(Chip8Error::ProgramNotLoaded);
         }
+        if let Some(input_reciever) = &self.input_handle {
+            self.key_pressed = match input_reciever.try_recv() {
+                Ok(Ok(x)) => x,
+                Ok(Err(e)) => match e {
+                    Chip8Error::ProgramRestartRequested => {
+                        self.initialize()?;
+                        None
+                    }
+                    _ => panic!("{}", e),
+                },
+                Err(TryRecvError::Empty) => self.key_pressed,
+                _ => panic!("Error receiving keypress."),
+            }
+        }
+
 
         let raw = self.fetch();
         let instruction = self.decode(raw)?;

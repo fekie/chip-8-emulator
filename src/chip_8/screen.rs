@@ -39,20 +39,8 @@ impl Screen {
 
         new_state
     }
-}
 
-impl Chip8 {
-    /// Draws the contents of the screen memory to the screen.
-    pub fn draw(&self, frame: &mut [u8]) {
-        for (i, pixel) in frame.chunks_exact_mut(4).enumerate() {
-            //dbg!(i);
-            let rgba = match self.screen.0[i] {
-                0 => [0, 0, 0, 0xFF],
-                1 => [0xFF, 0xFF, 0xFF, 0xFF],
-                _ => panic!("Invalid screen memory value."),
-            };
-
-            pixel.copy_from_slice(&rgba);
-        }
+    pub fn get(&self) -> &[u8; (WIDTH * HEIGHT) as usize] {
+        &self.0
     }
 }
