@@ -1,6 +1,6 @@
 use crate::chip_8::{Chip8, Chip8Error, EmulatorState};
 
-use super::stack;
+use super::{screen::Screen, stack, DelayTimer, SoundTimer};
 
 /// The address where our program starts in memory
 pub(crate) const PROGRAM_OFFSET: usize = 0x200;
@@ -94,20 +94,28 @@ impl Chip8 {
     /// Initializes the emulator's system memory and loads fonts into memory.
     /// You can now load a program with [`Self::load_program`].
     pub fn initialize(&mut self) -> Result<(), Chip8Error> {
+        // Clear memory
+        self.memory = Memory::default();
+
+        // Clear screen
+        self.screen = Screen::default();
+
         self.registers = [0; 16];
+        self.index_register = 0;
         self.program_counter = PROGRAM_OFFSET as u16;
-        self.needs_redraw = true;
 
         // Set the stack pointer to the value just under the stack, so that the
         // next push starts at bottom of the stack window.
         self.stack_pointer = stack::STACK_WINDOW_BOTTOM + 1;
 
-        self.memory.load_font_set()?;
+        self.delay_timer = DelayTimer::default();
+        self.sound_timer = SoundTimer::default();
+        self.key_pressed = None;
 
-        // Clear program memory
-        for address in PROGRAM_OFFSET..=0xFFF {
-            self.memory.set_byte(address, 0);
-        }
+        self.needs_redraw = true;
+        self.needs_program_restart = false;
+
+        self.memory.load_font_set()?;
 
         self.emulator_state
             .change_states(EmulatorState::InterpreterMemoryInitialized)?;
