@@ -89,7 +89,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let current_cycle = Instant::now();
         if (current_cycle - last_cycle) < Duration::from_secs_f64(1f64 / (CYCLES_PER_SECOND as f64))
         {
-            sleep(Duration::from_secs_f64(1_f64 / (2*CYCLES_PER_SECOND) as f64));
+            sleep(Duration::from_secs_f64(
+                1_f64 / (2 * CYCLES_PER_SECOND) as f64,
+            ));
             continue;
         }
 
@@ -121,6 +123,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         if input.update(&event) {
             // keyboard events
             let keycode_opt = crate::chip_8::keypad::handle_keyboard_input(&input, control_flow);
+
+            dbg!(&keycode_opt);
 
             //dbg!(keycode_opt);
             input_sender.send(keycode_opt).unwrap();
