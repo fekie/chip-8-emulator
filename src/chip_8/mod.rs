@@ -10,7 +10,7 @@ use memory::Memory;
 
 mod instructions;
 //pub(crate) mod keycode;
-mod keycode;
+pub mod keycode;
 mod memory;
 mod screen;
 pub(crate) mod sound;

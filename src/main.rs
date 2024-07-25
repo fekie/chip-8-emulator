@@ -138,7 +138,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             v += v.ilog(4);
         }
 
-        let current_keycode = window.get_keys();
+        let current_keycode = chip_8::keycode::get_available_keycode(&window);
 
         // We unwrap here as we want this code to exit if it fails. Real applications may want to handle this in a different way
         window
@@ -150,9 +150,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .unwrap();
 
         tx_frame_finished
-            .send(FrameFinishedSignal {
-                current_keycode: Keycode::Placeholder,
-            })
+            .send(FrameFinishedSignal { current_keycode })
             .unwrap();
 
         // Don't know why this works better below the tx.send but it does,
@@ -214,10 +212,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         pixel.copy_from_slice(&rgba);
     }
 } */
-
-fn get_available_keycode(window: Window) -> Keycode {
-    let pressed_keys = window.get_keys();
-}
 
 fn log_pixels_error<E: std::error::Error + 'static>(method_name: &str, err: E) {
     error!("{method_name}() failed: {err}");
