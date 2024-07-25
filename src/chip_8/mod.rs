@@ -9,7 +9,8 @@ use instructions::execution;
 use memory::Memory;
 
 mod instructions;
-pub(crate) mod keypad;
+//pub(crate) mod keycode;
+mod keycode;
 mod memory;
 mod screen;
 pub(crate) mod sound;
@@ -156,7 +157,6 @@ impl Chip8 {
             }
         }
 
-
         let raw = self.fetch();
         let instruction = self.decode(raw)?;
         self.execute(instruction)?;
@@ -241,6 +241,7 @@ impl Chip8 {
         Ok(())
     }
 }
+
 impl SoundTimer {
     pub fn decrement(&mut self) {
         if self.0 > 0 {

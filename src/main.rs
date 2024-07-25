@@ -3,19 +3,14 @@ use chip_8::{HEIGHT, WIDTH};
 use clap::Parser;
 use env_logger::Env;
 use log::{error, info};
-use pixels::{Pixels, SurfaceTexture};
+use minifb::Key;
+use minifb::Window;
+use minifb::WindowOptions;
 use std::io::Write;
 use std::sync::mpsc::{channel, TryRecvError};
 use std::sync::{Arc, Mutex};
 use std::thread::sleep;
 use std::time::{Duration, Instant};
-use winit::{
-    dpi::LogicalSize,
-    event::Event,
-    event_loop::{ControlFlow, EventLoop},
-    window::WindowBuilder,
-};
-use winit_input_helper::WinitInputHelper;
 
 mod chip_8;
 
@@ -32,8 +27,21 @@ struct Args {
     rom: String,
 }
 
+/// Represents characters 0-F on the keypad (encoded as 0x0-0xF)
+#[derive(Default, Debug)]
+struct Keycode(pub Option<u8>);
+
+#[derive(Debug)]
+struct FrameFinishedSignal {
+    /// The key that was pressed down just after the newly created frame.
+    current_keycode: Keycode,
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let env = Env::default().default_filter_or("warn");
+
+    let (tx_frame_finished, rx_frame_finished) =
+        crossbeam_channel::unbounded::<FrameFinishedSignal>();
 
     env_logger::Builder::from_env(env)
         .format(|buf, record| writeln!(buf, "{}: {}", record.level(), record.args()))
@@ -53,12 +61,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let program_bytes = std::fs::read(args.rom)?;
     chip_8.load_program(program_bytes.clone())?;
 
-    // Hang on to this example for dear life:
-    // https://github.com/parasyte/pixels/blob/main/examples/minimal-winit/src/main.rs
-    let event_loop = EventLoop::new();
-    let mut input = WinitInputHelper::new();
-
-    let window = {
+    /* let window = {
         let size = LogicalSize::new((WIDTH * SCALE) as f64, (HEIGHT * SCALE) as f64);
 
         WindowBuilder::new()
@@ -67,13 +70,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .with_min_inner_size(size)
             .build(&event_loop)
             .unwrap()
-    };
+    }; */
 
-    let mut pixels = {
+    /* let mut pixels = {
         let window_size = window.inner_size();
         let surface_texture = SurfaceTexture::new(window_size.width, window_size.height, &window);
         Pixels::new(WIDTH, HEIGHT, surface_texture)?
-    };
+    }; */
 
     let mut instant = Instant::now();
     let mut last_cycle = Instant::now();
@@ -108,7 +111,59 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             chip_8.sound_timer.decrement();
         }
     });
-    let mut last_frame = Instant::now();
+
+    let mut buffer: Vec<u32> = vec![0; (WIDTH * HEIGHT).try_into().unwrap()];
+
+    let mut window = Window::new(
+        "Test - ESC to exit",
+        (WIDTH * SCALE).try_into().unwrap(),
+        (HEIGHT * SCALE).try_into().unwrap(),
+        WindowOptions::default(),
+    )
+    .unwrap_or_else(|e| {
+        panic!("{}", e);
+    });
+
+    // Limit to max ~60 fps update rate
+    window.set_target_fps(60);
+
+    let mut v = 0;
+
+    let mut previous_frame_stamp = Instant::now();
+
+    while window.is_open() && !window.is_key_down(Key::Escape) {
+        for i in buffer.iter_mut() {
+            *i = v; // write something more funny here!
+            v += 1;
+            v += v.ilog(4);
+        }
+
+        let current_keycode = window.get_keys();
+
+        // We unwrap here as we want this code to exit if it fails. Real applications may want to handle this in a different way
+        window
+            .update_with_buffer(
+                &buffer,
+                WIDTH.try_into().unwrap(),
+                HEIGHT.try_into().unwrap(),
+            )
+            .unwrap();
+
+        tx_frame_finished
+            .send(FrameFinishedSignal {
+                current_keycode: Keycode::Placeholder,
+            })
+            .unwrap();
+
+        // Don't know why this works better below the tx.send but it does,
+        // even though normally it should be *right* after the frame technically.
+        // Move it back if it has issues.
+        previous_frame_stamp = Instant::now();
+    }
+
+    Ok(())
+
+    /* let mut last_frame = Instant::now();
     event_loop.run(move |event, _, control_flow| {
         // Draw the current frame
         if let Event::RedrawRequested(_) = event {
@@ -145,10 +200,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 window.request_redraw();
             }
         }
-    });
+    }); */
 }
 
-fn draw_frame(winit_frame: &mut Pixels, chip_8_frame: &[u8]) {
+/* fn draw_frame(winit_frame: &mut Pixels, chip_8_frame: &[u8]) {
     for (i, pixel) in winit_frame.frame_mut().chunks_exact_mut(4).enumerate() {
         let rgba = match chip_8_frame[i] {
             0 => [0, 0, 0, 0xFF],
@@ -158,6 +213,10 @@ fn draw_frame(winit_frame: &mut Pixels, chip_8_frame: &[u8]) {
 
         pixel.copy_from_slice(&rgba);
     }
+} */
+
+fn get_available_keycode(window: Window) -> Keycode {
+    let pressed_keys = window.get_keys();
 }
 
 fn log_pixels_error<E: std::error::Error + 'static>(method_name: &str, err: E) {

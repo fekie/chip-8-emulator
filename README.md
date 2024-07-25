@@ -1,5 +1,6 @@
 # chip-8-emulator
-This is a W.I.P CHIP-8 emulator written in Rust. 
+
+This is a W.I.P CHIP-8 emulator written in Rust.
 
 # Resources Used
 
