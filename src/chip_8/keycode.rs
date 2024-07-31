@@ -5,7 +5,7 @@ use crate::Keycode;
 use super::Chip8Error;
 
 /// We use the following keypad mapping:
-///
+/// ```
 /// Keypad                   Keyboard
 /// +-+-+-+-+                +-+-+-+-+
 /// |1|2|3|C|                |1|2|3|4|
@@ -16,6 +16,7 @@ use super::Chip8Error;
 /// +-+-+-+-+                +-+-+-+-+
 /// |A|0|B|F|                |Z|X|C|V|
 /// +-+-+-+-+                +-+-+-+-+
+/// ```
 pub fn get_available_keycode(window: &Window) -> Keycode {
     if window.is_key_down(Key::Key1) {
         return Keycode(Some(0x1));

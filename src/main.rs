@@ -16,9 +16,9 @@ mod chip_8;
 
 // We scale everything up by a factor of 8
 const SCALE: u32 = 8;
-const HZ: u32 = 30;
+const FRAME_HZ: u32 = 30;
 const CYCLES_PER_SECOND: u32 = 720;
-const CYCLES_PER_FRAME: u32 = CYCLES_PER_SECOND / HZ;
+const CYCLES_PER_FRAME: u32 = CYCLES_PER_SECOND / FRAME_HZ;
 const CYCLES_PER_CLOCK: u32 = CYCLES_PER_SECOND / 60;
 #[derive(clap::Parser, Debug)]
 struct Args {
@@ -28,7 +28,7 @@ struct Args {
 }
 
 /// Represents characters 0-F on the keypad (encoded as 0x0-0xF)
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone, Copy)]
 struct Keycode(pub Option<u8>);
 
 #[derive(Debug)]
@@ -49,17 +49,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let args = Args::parse();
 
-    let (frame_sender, frame_receiver) = channel();
-    let (input_sender, input_receiver) = channel();
-
     // I'm sorry I put this in a mutex, I need to multithread and the Chip8 doesn't
     // care about the performance loss.
-    let mut chip_8 = Chip8::new(frame_sender, input_receiver);
+    let chip_8_ref_1 = Arc::new(Mutex::new(Chip8::new()));
+    let chip_8_ref_2 = Arc::clone(&chip_8_ref_1);
 
-    chip_8.initialize()?;
+    chip_8_ref_1.lock().unwrap().initialize()?;
 
     let program_bytes = std::fs::read(args.rom)?;
-    chip_8.load_program(program_bytes.clone())?;
+    chip_8_ref_1
+        .lock()
+        .unwrap()
+        .load_program(program_bytes.clone())?;
 
     /* let window = {
         let size = LogicalSize::new((WIDTH * SCALE) as f64, (HEIGHT * SCALE) as f64);
@@ -78,18 +79,38 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Pixels::new(WIDTH, HEIGHT, surface_texture)?
     }; */
 
-    let mut instant = Instant::now();
-    let mut last_cycle = Instant::now();
-    let mut cycles = 0;
-    let _game_loop = std::thread::spawn(move || loop {
-        // Check for if we need to restart the program.
-        if chip_8.needs_program_restart {
-            chip_8.initialize().unwrap();
-            info!("Restarting program...");
-            chip_8.load_program(program_bytes.clone()).unwrap();
+    let _game_loop = std::thread::spawn(move || {
+        // looping cycle count used for knowing when to decrement timers
+        let mut cycle_count: u64 = 0;
+
+        loop {
+            // wait here until we get the signal that the frame has been drawn.
+            let finished_signal = rx_frame_finished.recv().unwrap();
+            let keycode = finished_signal.current_keycode;
+
+            let mut chip_8_guard = chip_8_ref_1.lock().unwrap();
+
+            for _ in 0..CYCLES_PER_FRAME {
+                chip_8_guard.cycle(keycode).unwrap();
+                cycle_count = cycle_count.wrapping_add(1);
+
+                if (cycle_count % 12) == 0 {
+                    chip_8_guard.delay_timer.decrement();
+                    chip_8_guard.sound_timer.decrement();
+                }
+            }
+
+            /* // Check for if we need to restart the program.
+            if chip_8_guard.needs_program_restart {
+                chip_8_guard.initialize().unwrap();
+                chip_8_guard.load_program(program_bytes.clone()).unwrap();
+                info!("Restarting program...");
+                #[allow(lint)]
+                break;
+            } */
         }
 
-        let current_cycle = Instant::now();
+        /* let current_cycle = Instant::now();
         if (current_cycle - last_cycle) < Duration::from_secs_f64(1f64 / (CYCLES_PER_SECOND as f64))
         {
             sleep(Duration::from_secs_f64(
@@ -109,7 +130,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         if (cycles % 12) == 0 {
             chip_8.delay_timer.decrement();
             chip_8.sound_timer.decrement();
-        }
+        } */
     });
 
     let mut buffer: Vec<u32> = vec![0; (WIDTH * HEIGHT).try_into().unwrap()];
@@ -125,17 +146,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     // Limit to max ~60 fps update rate
-    window.set_target_fps(60);
+    window.set_target_fps(FRAME_HZ as usize);
 
     let mut v = 0;
 
     let mut previous_frame_stamp = Instant::now();
 
     while window.is_open() && !window.is_key_down(Key::Escape) {
-        for i in buffer.iter_mut() {
-            *i = v; // write something more funny here!
-            v += 1;
-            v += v.ilog(4);
+        let pixel_frame = chip_8_ref_2.lock().unwrap().clone_frame();
+
+        for (real_pixel, screen_pixel) in buffer.iter_mut().zip(pixel_frame.iter()) {
+            *real_pixel = match screen_pixel {
+                true => 0x00FFFFFF,
+                false => 0,
+            }
         }
 
         let current_keycode = chip_8::keycode::get_available_keycode(&window);

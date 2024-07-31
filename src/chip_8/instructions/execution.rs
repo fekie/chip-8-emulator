@@ -182,12 +182,6 @@ impl Chip8 {
                 break;
             }
         }
-        if let Some(frame_handle) = &self.frame_handle {
-            frame_handle
-                .send(Box::new(self.screen.get().clone()))
-                .inspect_err(|e| error!("Error sending frame {e}"))
-                .unwrap();
-        }
     }
 
     pub fn instruction_skip_if_key_pressed(&mut self, vx: u8) {

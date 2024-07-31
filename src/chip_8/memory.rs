@@ -112,11 +112,6 @@ impl Chip8 {
         self.sound_timer = SoundTimer::default();
         self.key_pressed = None;
 
-        if let Some(frame_handle) = &self.frame_handle {
-            frame_handle
-                .send(Box::new(self.screen.get().clone()))
-                .unwrap();
-        }
         self.needs_program_restart = false;
 
         self.memory.load_font_set()?;

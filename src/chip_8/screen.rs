@@ -1,4 +1,5 @@
-use crate::Chip8;
+use std::sync::Mutex;
+
 use crate::HEIGHT;
 use crate::WIDTH;
 
@@ -9,12 +10,12 @@ use crate::WIDTH;
 /// of the screen.
 /// A memory location is given by `location = WIDTH*y + x`.
 #[derive(Debug)]
-pub struct Screen([u8; (WIDTH * HEIGHT) as usize]);
+pub struct Screen([bool; (WIDTH * HEIGHT) as usize]);
 
 impl Default for Screen {
     /// Initializes screen to black.
     fn default() -> Self {
-        Self([0; (WIDTH * HEIGHT) as usize])
+        Self([false; (WIDTH * HEIGHT) as usize])
     }
 }
 
@@ -22,7 +23,7 @@ impl Screen {
     /// Clears the screen.
     pub fn clear(&mut self) {
         for b in self.0.iter_mut() {
-            *b = 0x00;
+            *b = false;
         }
     }
 
@@ -34,13 +35,12 @@ impl Screen {
     pub fn invert(&mut self, x: u8, y: u8) -> bool {
         let address = (y as usize * WIDTH as usize) + x as usize;
 
-        let new_state = self.0[address] != 1;
-        self.0[address] = new_state as u8;
+        self.0[address] = !self.0[address];
 
-        new_state
+        self.0[address]
     }
 
-    pub fn get(&self) -> &[u8; (WIDTH * HEIGHT) as usize] {
-        &self.0
+    pub fn clone_frame(&self) -> [bool; (WIDTH * HEIGHT) as usize] {
+        self.0
     }
 }
