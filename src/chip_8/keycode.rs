@@ -2,8 +2,6 @@ use minifb::{Key, Window};
 
 use crate::Keycode;
 
-use super::Chip8Error;
-
 /// We use the following keypad mapping:
 /// ```
 /// Keypad                   Keyboard
@@ -82,5 +80,5 @@ pub fn get_available_keycode(window: &Window) -> Keycode {
         return Keycode(Some(0xF));
     }
 
-    return Keycode(None);
+    Keycode(None)
 }

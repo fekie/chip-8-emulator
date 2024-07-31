@@ -127,7 +127,7 @@ impl Chip8 {
         self.index_register = nnn;
     }
     pub fn instruction_jump_with_pc_offset(&mut self, nnn: u16) {
-        self.program_counter = self.registers[0x0 as usize] as u16 + nnn;
+        self.program_counter = self.registers[0x0] as u16 + nnn;
     }
     pub fn instruction_random(&mut self, vx: u8, nn: u8) {
         self.registers[vx as usize] = rand::Rng::gen_range(&mut rand::thread_rng(), 0..=255) & nn
