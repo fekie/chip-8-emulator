@@ -1,4 +1,7 @@
-use crate::chip_8::{Chip8, Chip8Error, EmulatorState};
+use crate::{
+    chip_8::{Chip8, Chip8Error, EmulatorState},
+    Keycode,
+};
 
 use super::{screen::Screen, stack, DelayTimer, SoundTimer};
 
@@ -110,7 +113,7 @@ impl Chip8 {
 
         self.delay_timer = DelayTimer::default();
         self.sound_timer = SoundTimer::default();
-        self.key_pressed = None;
+        self.keycode = Keycode(None);
 
         self.needs_program_restart = false;
 

@@ -185,7 +185,7 @@ impl Chip8 {
     }
 
     pub fn instruction_skip_if_key_pressed(&mut self, vx: u8) {
-        if let Some(keycode) = self.key_pressed {
+        if let Some(keycode) = self.keycode.0 {
             if keycode == self.registers[vx as usize] {
                 self.program_counter += 2;
             }
@@ -193,7 +193,7 @@ impl Chip8 {
     }
 
     pub fn instruction_skip_if_key_not_pressed(&mut self, vx: u8) {
-        if let Some(keycode) = self.key_pressed {
+        if let Some(keycode) = self.keycode.0 {
             if keycode != self.registers[vx as usize] {
                 return;
             }
@@ -207,12 +207,12 @@ impl Chip8 {
     }
 
     pub fn instruction_await_key_input(&mut self, vx: u8) {
-        if self.key_pressed.is_none() {
+        if self.keycode.0.is_none() {
             self.program_counter -= 2;
             return;
         }
 
-        self.registers[vx as usize] = self.key_pressed.unwrap();
+        self.registers[vx as usize] = self.keycode.0.unwrap();
     }
 
     pub fn instruction_set_delay_timer(&mut self, vx: u8) {

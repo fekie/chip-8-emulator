@@ -106,7 +106,7 @@ pub struct Chip8 {
     pub sound_timer: SoundTimer,
     emulator_state: EmulatorState,
     /// The current key that is pressed down.
-    pub key_pressed: Option<u8>,
+    pub keycode: Keycode,
     /// If this is true, then we need to redraw the frame.
     pub needs_redraw: bool,
     pub needs_program_restart: bool,
@@ -156,8 +156,11 @@ impl Chip8 {
             }
         } */
 
+        self.keycode = keycode;
+
         let raw = self.fetch();
         let instruction = self.decode(raw)?;
+        dbg!(&self.program_counter);
         self.execute(instruction)?;
 
         Ok(())
